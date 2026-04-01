@@ -1,0 +1,28 @@
+# VMware AVI Configuration
+# Copy to ~/.vmware-avi/config.yaml and edit
+
+controllers:
+  - name: prod-avi
+    host: avi-controller.example.com
+    username: admin
+    api_version: "22.1.4"
+    tenant: admin
+    port: 443
+    verify_ssl: true
+
+  # Add more controllers as needed:
+  # - name: staging-avi
+  #   host: avi-staging.example.com
+  #   username: admin
+
+# Which controller to use by default
+default_controller: prod-avi
+
+# AKO (Avi Kubernetes Operator) settings
+ako:
+  # Path to kubeconfig (default: ~/.kube/config)
+  kubeconfig: ~/.kube/config
+  # Default K8s context (leave empty to use current-context)
+  default_context: ""
+  # Namespace where AKO is deployed
+  namespace: avi-system

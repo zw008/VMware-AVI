@@ -1,0 +1,23 @@
+{
+  "skill_name": "vmware-avi",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我有个后端服务器 10.1.1.5 要打补丁，帮我把它从 prod-pool 摘掉，等维护完再挂回来",
+      "expected_output": "Should use pool member disable for graceful drain, show analytics to confirm connections drained, then after maintenance use pool member enable and verify health status",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "AKO 好像挂了，开发说他们的 Ingress 创建了但是没有对应的 VS，帮我排查一下",
+      "expected_output": "Should follow AKO troubleshooting workflow: check AKO pod status, check logs, validate ingress annotations, check sync status between K8s and Controller, suggest specific fix",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "帮我检查一下所有 SSL 证书还有多久过期，30 天内的列出来",
+      "expected_output": "Should use ssl expiry check with --days 30 flag, list certificates with expiry dates and associated virtual services",
+      "files": []
+    }
+  ]
+}
