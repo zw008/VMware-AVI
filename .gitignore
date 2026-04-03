@@ -17,5 +17,4 @@ htmlcov/
 .coverage
 *.so
 .DS_Store
-uv.lock
 vmware-avi-workspace/
