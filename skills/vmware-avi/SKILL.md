@@ -94,10 +94,10 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 When taking a backend server offline for patching, you need to drain traffic gracefully before maintenance and restore it after:
 
 1. List pool members and health → `vmware-avi pool members my-pool`
-2. Disable the target server (graceful drain) → `vmware-avi pool disable my-pool 10.1.1.5`
+2. Disable the target server (graceful drain) → `vmware-avi pool disable my-pool &lt;server-ip&gt;`
 3. Wait for active connections to drain (monitor analytics) → `vmware-avi analytics my-vs`
 4. Perform maintenance on the server
-5. Re-enable the server → `vmware-avi pool enable my-pool 10.1.1.5`
+5. Re-enable the server → `vmware-avi pool enable my-pool &lt;server-ip&gt;`
 6. Verify health status is green → `vmware-avi pool members my-pool`
 
 ### AKO Ingress Not Creating VS
