@@ -1,15 +1,15 @@
 {
   "name": "vmware-avi",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations",
   "homepage": "https://github.com/zw008/VMware-AVI",
   "license": "MIT",
-  "author": "Wei Zhou / 周崴",
+  "author": "Wei Zhou / \u5468\u5d34",
   "packages": [
     {
       "registry_name": "pypi",
       "name": "vmware-avi",
-      "version": "1.4.7",
+      "version": "1.4.8",
       "runtime": "python",
       "runtime_arguments": [],
       "environment_variables": {
@@ -22,34 +22,92 @@
   ],
   "remotes": [],
   "tools": {
-    "vs_list": { "description": "List all Virtual Services" },
-    "vs_status": { "description": "Show Virtual Service status details" },
-    "vs_toggle": { "description": "Enable or disable a Virtual Service" },
-    "pool_members": { "description": "List pool members and health status" },
-    "pool_member_enable": { "description": "Enable a pool member (restore traffic)" },
-    "pool_member_disable": { "description": "Disable a pool member (graceful drain)" },
-    "ssl_list": { "description": "List all SSL certificates" },
-    "ssl_expiry_check": { "description": "Check certificates expiring within N days" },
-    "vs_analytics": { "description": "Show VS analytics metrics" },
-    "vs_error_logs": { "description": "Show VS request error logs" },
-    "se_list": { "description": "List all Service Engines" },
-    "se_health": { "description": "Check Service Engine health" },
-    "ako_status": { "description": "Check AKO pod status" },
-    "ako_logs": { "description": "View AKO pod logs" },
-    "ako_restart": { "description": "Restart AKO pod" },
-    "ako_version": { "description": "Show AKO version info" },
-    "ako_config_show": { "description": "Show AKO Helm values" },
-    "ako_config_diff": { "description": "Show pending Helm changes" },
-    "ako_config_upgrade": { "description": "Helm upgrade AKO" },
-    "ako_ingress_check": { "description": "Validate Ingress annotations" },
-    "ako_ingress_map": { "description": "Show Ingress to VS mapping" },
-    "ako_ingress_diagnose": { "description": "Diagnose Ingress with no VS" },
-    "ako_ingress_fix_suggest": { "description": "Suggest fix for Ingress issues" },
-    "ako_sync_status": { "description": "Check K8s-Controller sync status" },
-    "ako_sync_diff": { "description": "Show K8s-Controller inconsistencies" },
-    "ako_sync_force": { "description": "Force AKO resync" },
-    "ako_clusters": { "description": "List clusters with AKO deployed" },
-    "ako_cluster_overview": { "description": "Cross-cluster AKO status overview" },
-    "ako_amko_status": { "description": "Show AMKO GSLB status" }
+    "vs_list": {
+      "description": "List all Virtual Services"
+    },
+    "vs_status": {
+      "description": "Show Virtual Service status details"
+    },
+    "vs_toggle": {
+      "description": "Enable or disable a Virtual Service"
+    },
+    "pool_members": {
+      "description": "List pool members and health status"
+    },
+    "pool_member_enable": {
+      "description": "Enable a pool member (restore traffic)"
+    },
+    "pool_member_disable": {
+      "description": "Disable a pool member (graceful drain)"
+    },
+    "ssl_list": {
+      "description": "List all SSL certificates"
+    },
+    "ssl_expiry_check": {
+      "description": "Check certificates expiring within N days"
+    },
+    "vs_analytics": {
+      "description": "Show VS analytics metrics"
+    },
+    "vs_error_logs": {
+      "description": "Show VS request error logs"
+    },
+    "se_list": {
+      "description": "List all Service Engines"
+    },
+    "se_health": {
+      "description": "Check Service Engine health"
+    },
+    "ako_status": {
+      "description": "Check AKO pod status"
+    },
+    "ako_logs": {
+      "description": "View AKO pod logs"
+    },
+    "ako_restart": {
+      "description": "Restart AKO pod"
+    },
+    "ako_version": {
+      "description": "Show AKO version info"
+    },
+    "ako_config_show": {
+      "description": "Show AKO Helm values"
+    },
+    "ako_config_diff": {
+      "description": "Show pending Helm changes"
+    },
+    "ako_config_upgrade": {
+      "description": "Helm upgrade AKO"
+    },
+    "ako_ingress_check": {
+      "description": "Validate Ingress annotations"
+    },
+    "ako_ingress_map": {
+      "description": "Show Ingress to VS mapping"
+    },
+    "ako_ingress_diagnose": {
+      "description": "Diagnose Ingress with no VS"
+    },
+    "ako_ingress_fix_suggest": {
+      "description": "Suggest fix for Ingress issues"
+    },
+    "ako_sync_status": {
+      "description": "Check K8s-Controller sync status"
+    },
+    "ako_sync_diff": {
+      "description": "Show K8s-Controller inconsistencies"
+    },
+    "ako_sync_force": {
+      "description": "Force AKO resync"
+    },
+    "ako_clusters": {
+      "description": "List clusters with AKO deployed"
+    },
+    "ako_cluster_overview": {
+      "description": "Cross-cluster AKO status overview"
+    },
+    "ako_amko_status": {
+      "description": "Show AMKO GSLB status"
+    }
   }
 }
