@@ -1,3 +1,8 @@
+## v1.4.9 (2026-04-11)
+
+- Fix: narrow AKO ingress trigger — only fire for Tanzu/vSphere AKO ingress, not generic nginx-ingress
+- Fix: clarify vmware-policy compatibility field (Python transitive dep, not required standalone binary)
+
 ## v1.4.8 (2026-04-09)
 
 - Security: bump cryptography 46.0.6→46.0.7 (CVE-2026-39892, buffer overflow)

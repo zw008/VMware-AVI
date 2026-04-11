@@ -2,7 +2,7 @@
 name: vmware-avi
 description: >
   Use this skill whenever the user mentions load balancing, ingress, virtual services, pool members, AVI, NSX ALB, AKO, or application delivery.
-  Also trigger when the user mentions ingress troubleshooting (even ingress-nginx) since AKO may be involved.
+  Also trigger when the user mentions AKO ingress troubleshooting in a Tanzu/vSphere environment.
   Do NOT trigger when the user explicitly asks to set up or configure nginx/HAProxy/Traefik from scratch — those are not AVI tasks.
   Directly handles: virtual service listing and enable/disable, pool member management (drain/enable traffic), SSL certificate expiry checks,
   analytics and error logs, service engine health, AKO pod troubleshooting, AKO Helm config management, Ingress annotation validation,
@@ -18,7 +18,7 @@ allowed-tools:
   - Bash
 metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"bins":["vmware-policy"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
 compatibility: >
-  Requires vmware-policy (auto-installed). All operations audited to ~/.vmware/audit.db.
+  vmware-policy auto-installed as Python dependency (provides @vmware_tool decorator and audit logging). All write operations audited to ~/.vmware/audit.db.
   AKO operations require kubectl and a valid kubeconfig. AVI Controller operations require avisdk.
 ---
 
