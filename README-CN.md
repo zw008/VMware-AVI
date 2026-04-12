@@ -1,6 +1,10 @@
 <!-- mcp-name: io.github.zw008/vmware-avi -->
 # VMware AVI
 
+> **作者**: Wei Zhou, VMware by Broadcom — wei-wz.zhou@broadcom.com
+> 本项目由 VMware 工程师维护的社区项目，非 VMware 官方产品。
+> VMware 官方开发者工具请访问 [developer.broadcom.com](https://developer.broadcom.com)。
+
 [English](README.md) | 中文
 
 AVI（NSX 高级负载均衡器）管理与 AKO Kubernetes 运维工具 — 10 大类 29 个工具。

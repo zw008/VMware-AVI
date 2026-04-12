@@ -9,7 +9,7 @@ description = "AVI (NSX Advanced Load Balancer) management and AKO Kubernetes op
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "Wei Zhou / 周崴" }]
+authors = [{ name = "Wei Zhou", email = "wei-wz.zhou@broadcom.com" }]
 dependencies = [
     "avisdk>=22.1,<31.0",
     "kubernetes>=28.0,<33.0",

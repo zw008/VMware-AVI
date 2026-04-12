@@ -1,6 +1,10 @@
 <!-- mcp-name: io.github.zw008/vmware-avi -->
 # VMware AVI
 
+> **Author**: Wei Zhou, VMware by Broadcom — wei-wz.zhou@broadcom.com
+> This is a community-driven project by a VMware engineer, not an official VMware product.
+> For official VMware developer tools see [developer.broadcom.com](https://developer.broadcom.com).
+
 English | [中文](README-CN.md)
 
 AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool — 29 tools across 10 categories.

@@ -127,20 +127,27 @@ Expired certificates cause outages. Run periodic checks across all controllers:
 | Automated pipelines | **MCP** | Type-safe parameters, structured output |
 | AKO troubleshooting | **CLI** | Interactive log tailing, Helm diff output |
 
-## MCP Tools (29)
+## MCP Tools (29 — 15 read, 14 write)
 
-| Category | Tools |
-|----------|-------|
-| Virtual Service (3) | `vs_list`, `vs_status`, `vs_toggle` |
-| Pool Member (3) | `pool_members`, `pool_member_enable`, `pool_member_disable` |
-| SSL Certificate (2) | `ssl_list`, `ssl_expiry_check` |
-| Analytics (2) | `vs_analytics`, `vs_error_logs` |
-| Service Engine (2) | `se_list`, `se_health` |
-| AKO Pod (4) | `ako_status`, `ako_logs`, `ako_restart`, `ako_version` |
-| AKO Config (3) | `ako_config_show`, `ako_config_diff`, `ako_config_upgrade` |
-| Ingress Diagnostics (4) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose`, `ako_ingress_fix_suggest` |
-| Sync Diagnostics (3) | `ako_sync_status`, `ako_sync_diff`, `ako_sync_force` |
-| Multi-cluster (3) | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` |
+| Category | Tools | R/W |
+|----------|-------|:---:|
+| Virtual Service (3) | `vs_list`, `vs_status` | Read |
+| | `vs_toggle` | Write |
+| Pool Member (3) | `pool_members` | Read |
+| | `pool_member_enable`, `pool_member_disable` | Write |
+| SSL Certificate (2) | `ssl_list`, `ssl_expiry_check` | Read |
+| Analytics (2) | `vs_analytics`, `vs_error_logs` | Read |
+| Service Engine (2) | `se_list`, `se_health` | Read |
+| AKO Pod (4) | `ako_status`, `ako_logs`, `ako_version` | Read |
+| | `ako_restart` | Write |
+| AKO Config (3) | `ako_config_show`, `ako_config_diff` | Read |
+| | `ako_config_upgrade` | Write |
+| Ingress Diagnostics (4) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose`, `ako_ingress_fix_suggest` | Read |
+| Sync Diagnostics (3) | `ako_sync_status`, `ako_sync_diff` | Read |
+| | `ako_sync_force` | Write |
+| Multi-cluster (3) | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` | Read |
+
+**Read/write split**: 15 tools are read-only, 14 modify state. Write tools require double confirmation and are audit-logged.
 
 ## CLI Quick Reference
 
