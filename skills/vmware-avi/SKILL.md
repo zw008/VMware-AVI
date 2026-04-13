@@ -16,13 +16,16 @@ installer:
 argument-hint: "[vs-name, ako command, or describe your task]"
 allowed-tools:
   - Bash
-metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"bins":["vmware-policy"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
+metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["VMWARE_<CONTROLLER>_PASSWORD","KUBECONFIG"],"bins":["vmware-policy","kubectl"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
 compatibility: >
   vmware-policy auto-installed as Python dependency (provides @vmware_tool decorator and audit logging). All write operations audited to ~/.vmware/audit.db.
-  AKO operations require kubectl and a valid kubeconfig. AVI Controller operations require avisdk.
+  AVI Controller operations require avisdk and a per-controller password env var in ~/.vmware-avi/.env following the pattern <CONTROLLER_NAME_UPPER>_PASSWORD (e.g., controller "prod-avi" → PROD_AVI_PASSWORD).
+  AKO operations require kubectl and a valid kubeconfig (default ~/.kube/config or KUBECONFIG env var). Kubeconfig is read-only — this skill does not modify kubeconfig files.
 ---
 
 # VMware AVI
+
+> **Disclaimer**: This is a community-maintained open-source project and is **not affiliated with, endorsed by, or sponsored by VMware, Inc. or Broadcom Inc.** "VMware", "NSX", and "AVI" are trademarks of Broadcom. Source code is publicly auditable at [github.com/zw008/VMware-AVI](https://github.com/zw008/VMware-AVI) under the MIT license.
 
 AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operations — 29 MCP tools.
 

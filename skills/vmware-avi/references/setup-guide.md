@@ -148,6 +148,8 @@ helm repo update
 
 ## Security
 
+> **Disclaimer**: This is a community-maintained open-source project and is **not affiliated with, endorsed by, or sponsored by VMware, Inc. or Broadcom Inc.** "VMware", "NSX", and "AVI" are trademarks of Broadcom.
+
 ### Password Management
 
 - Passwords are **never** stored in `config.yaml` -- only in `.env`
