@@ -44,7 +44,7 @@ def list_virtual_services(controller_name: str | None = None) -> None:
 
 
 def show_vs_status(name: str) -> None:
-    """Show detailed VS status."""
+    """Show detailed VS status including VIP, pool, runtime health and traffic."""
     cfg = load_config()
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
@@ -54,18 +54,76 @@ def show_vs_status(name: str) -> None:
         console.print(f"[red]Virtual Service '{name}' not found.[/red]")
         raise SystemExit(1)
 
-    console.print(f"\n[bold]{_sanitize(vs['name'])}[/bold]")
-    console.print(f"  Enabled: {vs.get('enabled', True)}")
-    console.print(f"  UUID: {vs.get('uuid', 'N/A')}")
+    uuid = vs.get("uuid", "")
 
+    # Fetch runtime via inventory endpoint (consolidated config + runtime).
+    # Fall back gracefully if endpoint is unavailable on this Controller.
+    inventory: dict = {}
+    try:
+        inv_resp = session.get(f"virtualservice-inventory/{uuid}")
+        inventory = inv_resp.json() if hasattr(inv_resp, "json") else inv_resp or {}
+    except Exception:
+        pass
+
+    runtime = inventory.get("runtime", {}) or {}
+    oper_status = runtime.get("oper_status", {}) or {}
+    metrics = inventory.get("metrics", {}) or {}
+
+    console.print(f"\n[bold]{_sanitize(vs['name'])}[/bold]")
+    console.print(f"  Enabled:   {vs.get('enabled', True)}")
+    console.print(f"  UUID:      {uuid or 'N/A'}")
+
+    # VIP(s) — VS can have multiple VIPs (IPv4/IPv6)
     vips = vs.get("vip", [])
     if vips:
-        console.print(f"  VIP: {vips[0].get('ip_address', {}).get('addr', 'N/A')}")
+        vip_strs = []
+        for v in vips:
+            addr = v.get("ip_address", {}).get("addr")
+            addr6 = v.get("ip6_address", {}).get("addr")
+            for a in (addr, addr6):
+                if a:
+                    vip_strs.append(a)
+        console.print(f"  VIP:       {', '.join(vip_strs) or 'N/A'}")
 
+    # Pool / Pool Group
     pool_ref = vs.get("pool_ref", "")
     if pool_ref:
         pool_name = pool_ref.split("/")[-1].split("?")[0]
-        console.print(f"  Pool: {pool_name}")
+        console.print(f"  Pool:      {pool_name}")
+    pool_group_ref = vs.get("pool_group_ref", "")
+    if pool_group_ref:
+        pg_name = pool_group_ref.split("/")[-1].split("?")[0]
+        console.print(f"  PoolGroup: {pg_name}")
+
+    # Health / oper status
+    oper_state = oper_status.get("state") or runtime.get("oper_status_state", "UNKNOWN")
+    state_color = {
+        "OPER_UP": "green", "OPER_AWAITING_UP": "yellow",
+        "OPER_DOWN": "red", "OPER_DISABLED": "dim",
+    }.get(oper_state, "white")
+    console.print(f"  Health:    [{state_color}]{oper_state}[/{state_color}]")
+
+    reason = oper_status.get("reason")
+    if reason:
+        reason_str = reason if isinstance(reason, str) else ", ".join(map(str, reason))
+        console.print(f"  Reason:    {reason_str}")
+
+    # Throughput & connection metrics (from inventory when available)
+    bandwidth = metrics.get("l4_client.avg_bandwidth") or metrics.get("throughput")
+    if bandwidth is not None:
+        console.print(f"  Throughput: {bandwidth}")
+    conn_rate = metrics.get("l4_client.avg_new_established_conns")
+    if conn_rate is not None:
+        console.print(f"  New conn/s: {conn_rate}")
+    resp_latency = metrics.get("l7_client.avg_resp_latency")
+    if resp_latency is not None:
+        console.print(f"  Latency:   {resp_latency} ms")
+
+    # SE placement (number of SEs serving this VS)
+    se_list = runtime.get("vip_summary", [])
+    if se_list:
+        se_count = sum(len(v.get("service_engine", []) or []) for v in se_list)
+        console.print(f"  SEs:       {se_count}")
 
     console.print()
 

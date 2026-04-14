@@ -1,3 +1,14 @@
+## v1.5.6 (2026-04-15)
+
+- Fix: CRITICAL — `mcp_server` module missing from PyPI wheel due to missing hatch packages config. MCP server would fail with `ModuleNotFoundError: No module named 'mcp_server'`. Added `[tool.hatch.build.targets.wheel] packages = ["vmware_avi", "mcp_server"]` to pyproject.toml
+- Fix: FQDN in controller host config — avisdk rejected non-IP hostnames with "Invalid Controller IP6 Address". Connection manager now resolves FQDN -> IP via socket.getaddrinfo() at connect time
+- Fix: vs_analytics returned empty series — switched from per-entity endpoint to analytics/metrics/collection with entity_uuid for consistent results across Controller 22.x/30.x versions
+- Fix: vs_error_logs HTTP 400 — duration field now parsed via shorthand helper (accepts '1h', '30m', '24h', '7d' or raw seconds) and sent as integer seconds to match API contract
+- Feat: vs_status now returns VIP(s), Pool, PoolGroup, health (oper_status), reason, throughput, new conn/s, latency, and SE placement
+- Feat: se_health VS count derived from multiple known runtime fields (se_vs_list, vs_ref) for accurate counts across Controller versions
+- Feat: new pool_list MCP tool — discover pools on controller with optional vs_filter substring; solves "pool names differ from VS names" discovery gap
+- Credit: Tim (Taiwan TAM) for comprehensive v1.5.4 bug report
+
 ## v1.5.5 (2026-04-15)
 
 - Align with VMware skill family v1.5.5

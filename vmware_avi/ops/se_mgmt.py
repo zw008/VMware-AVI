@@ -38,21 +38,39 @@ def list_service_engines() -> None:
 
 
 def check_se_health() -> None:
-    """Check SE health and resource usage."""
+    """Check SE health and resource usage.
+
+    VS count is derived from serviceengine-inventory ``runtime.se_vs_list`` or
+    ``runtime.vs_ref`` (name varies by Controller version). The previous
+    ``runtime.virtualservice_refs`` path is not populated on 22.x builds and
+    always returned 0, giving false "idle SE" signals.
+    """
     cfg = load_config()
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
     resp = session.get("serviceengine-inventory")
-    ses = resp.json().get("results", [])
+    ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
 
     console.print("\n[bold]Service Engine Health[/bold]")
     for se in ses:
-        cfg_data = se.get("config", {})
-        runtime = se.get("runtime", {})
+        cfg_data = se.get("config", {}) or {}
+        runtime = se.get("runtime", {}) or {}
         name = cfg_data.get("name", "N/A")
-        oper = runtime.get("oper_status", {}).get("state", "N/A")
-        vs_count = len(runtime.get("virtualservice_refs", []))
+        oper = (runtime.get("oper_status", {}) or {}).get("state", "N/A")
+
+        # VS count — try multiple known field names across Controller versions.
+        # Fall back to aggregate counters if per-SE list is absent.
+        vs_list = (
+            runtime.get("se_vs_list")
+            or runtime.get("vs_ref")
+            or runtime.get("virtualservice_refs")
+            or []
+        )
+        vs_count = len(vs_list) if isinstance(vs_list, list) else 0
+        if vs_count == 0:
+            # Aggregate from vip_summary if available
+            vs_count = runtime.get("num_vs") or runtime.get("num_se_dps", 0)
 
         status_color = "green" if oper == "OPER_UP" else "red"
         console.print(

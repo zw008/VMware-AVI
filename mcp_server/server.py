@@ -47,9 +47,18 @@ TOOLS = [
         "properties": {"name": {"type": "string", "description": "Exact Virtual Service name"}, "enable": {"type": "boolean", "description": "true to enable, false to disable"}},
         "required": ["name", "enable"],
     }, annotations=_WRITE_DESTRUCTIVE),
+    Tool(name="pool_list", description=(
+        "[READ] Discover pools on the Controller. Use this BEFORE pool_members when you don't "
+        "know exact pool names — pools often have different names from VS. "
+        "Pass vs_filter to narrow to pools referenced by matching Virtual Services."
+    ), inputSchema={
+        "type": "object",
+        "properties": {"vs_filter": {"type": "string", "description": "Optional substring to match VS names (e.g. 'web') — returns pools referenced by those VS only"}},
+    }, annotations=_READ),
     Tool(name="pool_members", description=(
         "[READ] List all members of a pool with server IP, port, enabled state, and health status. "
-        "Use this before enabling/disabling individual members during maintenance windows."
+        "Use this before enabling/disabling individual members during maintenance windows. "
+        "Run pool_list first if you don't know the exact pool name."
     ), inputSchema={
         "type": "object", "properties": {"pool": {"type": "string", "description": "Pool name"}}, "required": ["pool"],
     }, annotations=_READ),
@@ -278,6 +287,9 @@ def _dispatch(name: str, args: dict) -> str:
     if name == "vs_toggle":
         from vmware_avi.ops.vs_mgmt import toggle_vs
         return _capture_output(toggle_vs, args["name"], enable=args["enable"])
+    if name == "pool_list":
+        from vmware_avi.ops.pool_mgmt import list_pools
+        return _capture_output(list_pools, args.get("vs_filter"))
     if name == "pool_members":
         from vmware_avi.ops.pool_mgmt import list_pool_members
         return _capture_output(list_pool_members, args["pool"])

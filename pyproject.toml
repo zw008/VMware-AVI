@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vmware-avi"
-version = "1.5.5"
+version = "1.5.6"
 description = "AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool"
 readme = "README.md"
 license = "MIT"
@@ -32,6 +32,9 @@ dev = [
 [project.scripts]
 vmware-avi = "vmware_avi.cli:app"
 vmware-avi-mcp = "mcp_server.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vmware_avi", "mcp_server"]
 
 [tool.ruff]
 line-length = 100
