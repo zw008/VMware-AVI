@@ -1,3 +1,3 @@
 """VMware AVI - AVI (NSX ALB) management and AKO Kubernetes operations."""
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
