@@ -17,6 +17,11 @@ _log = logging.getLogger("vmware-avi-mcp")
 
 server = Server("vmware-avi-mcp")
 
+# --- Annotation presets ---
+_READ = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
+_WRITE = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True}
+_WRITE_DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}
+
 
 # --- Tool definitions ---
 
@@ -27,13 +32,13 @@ TOOLS = [
         "Use this for an overview before drilling into a specific VS with vs_status."
     ), inputSchema={
         "type": "object", "properties": {"controller": {"type": "string", "description": "AVI controller name from config (optional, uses default)"}},
-    }),
+    }, annotations=_READ),
     Tool(name="vs_status", description=(
         "[READ] Show detailed status for a specific Virtual Service — VIP, pool, health, "
         "connections, and throughput. Use vs_list first to find the exact VS name."
     ), inputSchema={
         "type": "object", "properties": {"name": {"type": "string", "description": "Exact Virtual Service name"}}, "required": ["name"],
-    }),
+    }, annotations=_READ),
     Tool(name="vs_toggle", description=(
         "[WRITE] Enable or disable a Virtual Service. Disabling stops all traffic to this VS. "
         "Requires double confirmation. Use vs_status first to check current state."
@@ -41,13 +46,13 @@ TOOLS = [
         "type": "object",
         "properties": {"name": {"type": "string", "description": "Exact Virtual Service name"}, "enable": {"type": "boolean", "description": "true to enable, false to disable"}},
         "required": ["name", "enable"],
-    }),
+    }, annotations=_WRITE_DESTRUCTIVE),
     Tool(name="pool_members", description=(
         "[READ] List all members of a pool with server IP, port, enabled state, and health status. "
         "Use this before enabling/disabling individual members during maintenance windows."
     ), inputSchema={
         "type": "object", "properties": {"pool": {"type": "string", "description": "Pool name"}}, "required": ["pool"],
-    }),
+    }, annotations=_READ),
     Tool(name="pool_member_enable", description=(
         "[WRITE] Enable a pool member to start receiving traffic. "
         "Use pool_members first to verify server IP and current state."
@@ -55,7 +60,7 @@ TOOLS = [
         "type": "object",
         "properties": {"pool": {"type": "string", "description": "Pool name"}, "server": {"type": "string", "description": "Server IP address"}},
         "required": ["pool", "server"],
-    }),
+    }, annotations=_WRITE),
     Tool(name="pool_member_disable", description=(
         "[WRITE] Disable a pool member with graceful drain — existing connections complete, no new traffic. "
         "Use during maintenance windows or rolling deployments. Requires double confirmation."
@@ -63,24 +68,24 @@ TOOLS = [
         "type": "object",
         "properties": {"pool": {"type": "string", "description": "Pool name"}, "server": {"type": "string", "description": "Server IP address"}},
         "required": ["pool", "server"],
-    }),
+    }, annotations=_WRITE_DESTRUCTIVE),
     Tool(name="ssl_list", description=(
         "[READ] List all SSL/TLS certificates on the AVI Controller with name, type, issuer, and expiry date."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ssl_expiry_check", description=(
         "[READ] Check which SSL certificates expire within N days (default 30). "
         "Returns certificate name, expiry date, and days remaining. Run regularly to prevent outages."
     ), inputSchema={
         "type": "object", "properties": {"days": {"type": "integer", "default": 30, "description": "Check certs expiring within this many days (default 30)"}},
-    }),
+    }, annotations=_READ),
     Tool(name="vs_analytics", description=(
         "[READ] Show analytics for a Virtual Service — throughput, latency percentiles, connection rate, "
         "and error breakdown. Use to investigate performance issues."
     ), inputSchema={
         "type": "object", "properties": {"vs_name": {"type": "string", "description": "Virtual Service name"}}, "required": ["vs_name"],
-    }),
+    }, annotations=_READ),
     Tool(name="vs_error_logs", description=(
         "[READ] Show recent request error logs for a Virtual Service — HTTP status codes, client IPs, "
         "URIs, and response times. Use to diagnose 5xx errors or latency spikes."
@@ -88,75 +93,75 @@ TOOLS = [
         "type": "object",
         "properties": {"vs_name": {"type": "string", "description": "Virtual Service name"}, "since": {"type": "string", "default": "1h", "description": "Time window, e.g. '1h', '30m', '2d'"}},
         "required": ["vs_name"],
-    }),
+    }, annotations=_READ),
     Tool(name="se_list", description=(
         "[READ] List all Service Engines with name, status, connected VS count, and resource usage."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="se_health", description=(
         "[READ] Check health of all Service Engines — CPU, memory, disk usage, and connectivity. "
         "Use when VS health degrades to check if the issue is at the SE level."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     # === AKO mode (K8s) ===
     Tool(name="ako_status", description=(
         "[READ] Check AKO (AVI Kubernetes Operator) pod status — running, restarts, age, and ready state. "
         "First step when troubleshooting Ingress or LoadBalancer issues in Tanzu/K8s."
     ), inputSchema={
         "type": "object", "properties": {"context": {"type": "string", "description": "K8s context name (optional, uses current context)"}},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_logs", description=(
         "[READ] View AKO pod logs to debug Ingress creation failures, sync errors, or AVI Controller "
         "connectivity issues. Use 'since' to narrow the time window."
     ), inputSchema={
         "type": "object",
         "properties": {"tail": {"type": "integer", "default": 100, "description": "Number of log lines to show (default 100)"}, "since": {"type": "string", "description": "Time filter, e.g. '30m', '1h'"}},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_restart", description=(
         "[WRITE] Restart AKO pod by deleting it (K8s recreates automatically). "
         "Use when AKO is stuck or after config changes. Requires double confirmation. "
         "Brief traffic disruption possible during restart."
     ), inputSchema={
         "type": "object", "properties": {"context": {"type": "string", "description": "K8s context name (optional)"}},
-    }),
+    }, annotations=_WRITE_DESTRUCTIVE),
     Tool(name="ako_version", description=(
         "[READ] Show AKO version, Helm chart version, and container image tag. "
         "Use to verify AKO version compatibility with AVI Controller."
     ), inputSchema={
         "type": "object", "properties": {"context": {"type": "string", "description": "K8s context name (optional)"}},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_config_show", description=(
         "[READ] Show current AKO Helm values.yaml configuration — controller IP, cloud name, "
         "network settings, and feature flags."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_config_diff", description=(
         "[READ] Show pending Helm value changes that haven't been applied yet. "
         "Use before ako_config_upgrade to review what will change."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_config_upgrade", description=(
         "[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety. "
         "Set dry_run=false to apply. Requires double confirmation for non-dry-run."
     ), inputSchema={
         "type": "object", "properties": {"dry_run": {"type": "boolean", "default": True, "description": "Preview changes without applying (default true)"}},
-    }),
+    }, annotations=_WRITE),
     Tool(name="ako_ingress_check", description=(
         "[READ] Validate Ingress annotations in a namespace — checks for unsupported or misspelled "
         "AKO annotations that prevent VS creation."
     ), inputSchema={
         "type": "object", "properties": {"namespace": {"type": "string", "description": "K8s namespace to check"}}, "required": ["namespace"],
-    }),
+    }, annotations=_READ),
     Tool(name="ako_ingress_map", description=(
         "[READ] Show mapping between K8s Ingress resources and AVI Virtual Services. "
         "Use to verify which Ingresses have corresponding VS objects."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_ingress_diagnose", description=(
         "[READ] Diagnose why a specific Ingress has no corresponding Virtual Service. "
         "Checks annotations, TLS config, service endpoints, and AKO logs for errors."
@@ -164,7 +169,7 @@ TOOLS = [
         "type": "object",
         "properties": {"name": {"type": "string", "description": "Ingress resource name"}, "namespace": {"type": "string", "default": "default", "description": "K8s namespace (default 'default')"}},
         "required": ["name"],
-    }),
+    }, annotations=_READ),
     Tool(name="ako_ingress_fix_suggest", description=(
         "[READ] Suggest specific fixes for Ingress issues — returns actionable kubectl commands "
         "or annotation corrections based on the diagnosed problem."
@@ -172,42 +177,42 @@ TOOLS = [
         "type": "object",
         "properties": {"name": {"type": "string", "description": "Ingress resource name"}, "namespace": {"type": "string", "default": "default", "description": "K8s namespace (default 'default')"}},
         "required": ["name"],
-    }),
+    }, annotations=_READ),
     Tool(name="ako_sync_status", description=(
         "[READ] Check sync status between K8s resources and AVI Controller objects. "
         "Shows in-sync, pending, and error counts."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_sync_diff", description=(
         "[READ] Show specific inconsistencies between K8s Ingress/Service definitions and "
         "AVI Controller VS/Pool objects. Use to identify drift."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_sync_force", description=(
         "[WRITE] Force AKO to resync all K8s resources with AVI Controller. "
         "Use when drift is detected. Requires double confirmation. May cause brief traffic disruption."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_WRITE_DESTRUCTIVE),
     Tool(name="ako_clusters", description=(
         "[READ] List all K8s clusters that have AKO deployed, with version and status."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_cluster_overview", description=(
         "[READ] Cross-cluster AKO overview — VS count, pool count, health summary per cluster. "
         "Use for multi-cluster fleet health assessment."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
     Tool(name="ako_amko_status", description=(
         "[READ] Show AMKO (AVI Multi-Cluster Kubernetes Operator) GSLB status — global services, "
         "member clusters, and federation health."
     ), inputSchema={
         "type": "object", "properties": {},
-    }),
+    }, annotations=_READ),
 ]
 
 
@@ -258,7 +263,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=output)]
     except Exception as exc:
         log_operation(operation=name, resource=json.dumps(arguments), result=f"error: {exc}")
-        return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+        return [TextContent(type="text", text=f"Error: {exc}. Run 'vmware-avi doctor' to verify connectivity.")]
 
 
 def _dispatch(name: str, args: dict) -> str:
