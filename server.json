@@ -1,6 +1,6 @@
 {
   "name": "vmware-avi",
-  "version": "1.5.5",
+  "version": "1.5.7",
   "description": "AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations",
   "homepage": "https://github.com/zw008/VMware-AVI",
   "license": "MIT",
@@ -9,7 +9,7 @@
     {
       "registry_name": "pypi",
       "name": "vmware-avi",
-      "version": "1.5.6",
+      "version": "1.5.7",
       "runtime": "python",
       "runtime_arguments": [],
       "environment_variables": {
