@@ -89,11 +89,20 @@ def list_pool_members(pool_name: str) -> None:
     console.print(f"  Total members: {len(servers)}")
 
 
-def toggle_pool_member(pool_name: str, server_ip: str, *, enable: bool) -> None:
-    """Enable or disable a pool member."""
+def toggle_pool_member(pool_name: str, server_ip: str, *, enable: bool, skip_prompt: bool = False) -> None:
+    """Enable or disable a pool member.
+
+    Args:
+        pool_name: Pool name.
+        server_ip: Server IP address.
+        enable: True to enable, False to disable.
+        skip_prompt: When True, bypass the interactive double-confirm prompt.
+            Used by MCP callers that enforce confirmation via the ``confirmed``
+            parameter before reaching this function.
+    """
     action = "enable" if enable else "disable"
 
-    if not enable:
+    if not enable and not skip_prompt:
         from vmware_avi._safety import double_confirm
 
         if not double_confirm(f"Disable pool member '{server_ip}' in '{pool_name}'"):

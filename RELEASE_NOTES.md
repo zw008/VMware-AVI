@@ -1,3 +1,9 @@
+## v1.5.8 (2026-04-15)
+
+- Feat: MCP server migrated from low-level `mcp.server.Server` to `FastMCP`, matching the rest of the family. All 30 tool names and input schemas preserved.
+- Fix: 4 destructive MCP tools bypassed CLI's interactive `double_confirm` in MCP mode. Added `confirmed: bool = False` parameter with preview-by-default: `vs_toggle` (when disabling), `pool_member_disable`, `ako_restart`, `ako_sync_force`. Ops-layer functions now take `skip_prompt` so MCP callers that already validated `confirmed=True` bypass the stdio-blocking prompt.
+- Align with VMware skill family v1.5.8
+
 ## v1.5.7 (2026-04-15)
 
 - Align with VMware skill family v1.5.7 (Pilot `__from_step_N__` fix + VKS SSL/timeout fix)

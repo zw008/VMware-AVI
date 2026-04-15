@@ -86,13 +86,21 @@ def view_ako_logs(tail: int = 100, since: str = "", context: str | None = None) 
     console.print(logs)
 
 
-def restart_ako(context: str | None = None) -> None:
-    """Restart AKO pod by deleting it (deployment recreates it)."""
-    from vmware_avi._safety import double_confirm
+def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> None:
+    """Restart AKO pod by deleting it (deployment recreates it).
 
-    if not double_confirm("Restart AKO pod"):
-        console.print("[yellow]Cancelled.[/yellow]")
-        return
+    Args:
+        context: K8s context name (optional, uses current context).
+        skip_prompt: When True, bypass the interactive double-confirm prompt.
+            Used by MCP callers that enforce confirmation via the ``confirmed``
+            parameter before reaching this function.
+    """
+    if not skip_prompt:
+        from vmware_avi._safety import double_confirm
+
+        if not double_confirm("Restart AKO pod"):
+            console.print("[yellow]Cancelled.[/yellow]")
+            return
 
     cfg = load_config()
     k8s = K8sConnectionManager(cfg)
