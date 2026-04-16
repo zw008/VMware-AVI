@@ -25,14 +25,35 @@ def list_pools(vs_filter: str | None = None) -> None:
 
     referenced: set[str] | None = None
     if vs_filter:
-        vs_resp = session.get("virtualservice", params={"fields": "name,pool_ref,pool_group_ref"})
+        # /virtualservice omits pool associations for K8S-managed and
+        # policy-driven VSes (pool_ref at the top level is ""), so filtering
+        # off that endpoint produced zero matches. /virtualservice-inventory
+        # flattens every directly-attached pool and pool group into
+        # top-level `pools[]` / `poolgroups[]` URL arrays, so it's the
+        # canonical place to discover the VS→pool graph.
+        vs_resp = session.get("virtualservice-inventory")
         referenced = set()
-        for vs in (vs_resp.json() if hasattr(vs_resp, "json") else vs_resp).get("results", []):
-            if vs_filter.lower() not in vs.get("name", "").lower():
+        poolgroup_uuids: set[str] = set()
+        for entry in (vs_resp.json() if hasattr(vs_resp, "json") else vs_resp).get("results", []):
+            name = (entry.get("config") or {}).get("name", "")
+            if vs_filter.lower() not in name.lower():
                 continue
-            for ref in (vs.get("pool_ref"), vs.get("pool_group_ref")):
+            for ref in entry.get("pools") or []:
+                referenced.add(ref.rsplit("/", 1)[-1])
+            for ref in entry.get("poolgroups") or []:
+                poolgroup_uuids.add(ref.rsplit("/", 1)[-1])
+
+        # Resolve each pool group to its member pools so VSes whose traffic
+        # routes through a PoolGroup still surface their underlying pools.
+        for pg_uuid in poolgroup_uuids:
+            try:
+                pg = session.get(f"poolgroup/{pg_uuid}").json()
+            except Exception:
+                continue
+            for member in pg.get("members") or []:
+                ref = member.get("pool_ref")
                 if ref:
-                    referenced.add(ref.split("/")[-1].split("?")[0])
+                    referenced.add(ref.rsplit("/", 1)[-1].split("#")[0].split("?")[0])
 
     resp = session.get("pool", params={"fields": "name,uuid,servers,enabled,health_monitor_refs"})
     pools = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
