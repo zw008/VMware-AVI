@@ -1,3 +1,12 @@
+## v1.5.11 (2026-04-17)
+
+- Fix: vs_analytics HTTP 404 — AVI 22.x requires POST for `/analytics/metrics/collection` with `metric_requests[]` array wrapping (PR #4, credit @timwangbc)
+- Fix: vs_error_logs HTTP 400 "VirtualService ID required" — added `virtualservice` URL param for VS UUID (PR #5, credit @timwangbc)
+- Fix: pool_list vs_filter returned 0 matches for K8S-managed VSes — switched to `/virtualservice-inventory` which exposes the real VS→pool graph including pool groups (PR #6, credit @timwangbc)
+- Fix: se_health VS count always 0 on 22.x — reconstructed SE→VS mapping by inverting `vip_summary[].service_engine[]` from `/virtualservice-inventory` (PR #7, credit @timwangbc)
+- Tests: added unit tests for analytics, error logs, pool discovery, and SE health (14 new test cases)
+- Result: 12/12 non-AKO MCP tools now pass against AVI Controller 22.x
+
 ## v1.5.10 (2026-04-16)
 
 - Security: bump python-multipart 0.0.22→0.0.26 (DoS via large multipart preamble/epilogue)
