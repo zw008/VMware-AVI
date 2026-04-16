@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -m pytest tests/test_analytics.py -v)",
-      "Bash(command -v py python3 uv)",
-      "Bash(uv run:*)"
-    ]
-  }
-}
