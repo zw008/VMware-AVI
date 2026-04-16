@@ -146,9 +146,13 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
         raise SystemExit(1) from None
 
     uuid = vs["uuid"]
+    # AVI 22.x requires the VS UUID as an explicit ``virtualservice`` URL
+    # parameter on /analytics/logs; passing it only inside ``filter`` as
+    # ``co(vs_uuid,<uuid>)`` yields HTTP 400 "VirtualService ID required".
     resp = session.get("analytics/logs", params={
         "type": "1",
-        "filter": f"co(vs_uuid,{uuid}),ne(response_code,200)",
+        "virtualservice": uuid,
+        "filter": "ne(response_code,200)",
         "page_size": "50",
         "duration": str(duration_seconds),
     })
