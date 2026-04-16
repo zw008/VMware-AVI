@@ -65,7 +65,10 @@ def show_analytics(vs_name: str) -> None:
         "l7_client.pct_response_errors",
         "l7_client.sum_total_responses",
     ])
-    resp = session.get("analytics/metrics/collection", params={
+    # AVI 22.x requires POST for /analytics/metrics/collection; GET responds
+    # with HTTP 404 "Pl. use Post request". The query params move into the
+    # JSON body unchanged.
+    resp = session.post("analytics/metrics/collection", data={
         "metric_id": metric_ids,
         "entity_uuid": uuid,
         "step": "300",
