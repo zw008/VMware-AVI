@@ -18,3 +18,5 @@ htmlcov/
 *.so
 .DS_Store
 vmware-avi-workspace/
+.claude/settings.local.json
+.claude/

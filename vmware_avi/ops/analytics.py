@@ -65,11 +65,18 @@ def show_analytics(vs_name: str) -> None:
         "l7_client.pct_response_errors",
         "l7_client.sum_total_responses",
     ])
-    resp = session.get("analytics/metrics/collection", params={
-        "metric_id": metric_ids,
-        "entity_uuid": uuid,
-        "step": "300",
-        "limit": "12",
+    # AVI 22.x requires POST for /analytics/metrics/collection; GET responds
+    # with HTTP 404 "Pl. use Post request". This is the *collections* API,
+    # so the body must wrap each query in a metric_requests[] entry —
+    # flattening the params at the top level yields HTTP 404
+    # {"error": "Empty Request"}.
+    resp = session.post("analytics/metrics/collection", data={
+        "metric_requests": [{
+            "metric_id": metric_ids,
+            "entity_uuid": uuid,
+            "step": 300,
+            "limit": 12,
+        }],
     })
     payload = resp.json() if hasattr(resp, "json") else resp
 
