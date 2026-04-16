@@ -40,14 +40,32 @@ def list_service_engines() -> None:
 def check_se_health() -> None:
     """Check SE health and resource usage.
 
-    VS count is derived from serviceengine-inventory ``runtime.se_vs_list`` or
-    ``runtime.vs_ref`` (name varies by Controller version). The previous
-    ``runtime.virtualservice_refs`` path is not populated on 22.x builds and
-    always returned 0, giving false "idle SE" signals.
+    VS count is reconstructed by inverting the VS→SE placement map from
+    ``/virtualservice-inventory`` (``runtime.vip_summary[].service_engine[]``).
+    On 22.x Controllers the per-SE ``runtime`` object does not expose any
+    VS list field, so the previous attempts at ``se_vs_list`` / ``vs_ref`` /
+    ``virtualservice_refs`` always produced 0 and gave false "idle SE"
+    signals.
     """
     cfg = load_config()
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
+
+    # Build SE-UUID → set of VS-UUIDs it hosts, then collapse to counts.
+    # De-duping per VS (not per (VS, VIP) pair) ensures a VS with multiple
+    # VIPs landing on the same SE still only counts once.
+    vs_resp = session.get("virtualservice-inventory")
+    se_vs_map: dict[str, set[str]] = {}
+    for vs in (vs_resp.json() if hasattr(vs_resp, "json") else vs_resp).get("results", []):
+        vs_uuid = vs.get("uuid") or (vs.get("config") or {}).get("uuid", "")
+        if not vs_uuid:
+            continue
+        runtime = vs.get("runtime") or {}
+        for vip in runtime.get("vip_summary") or []:
+            for se in vip.get("service_engine") or []:
+                se_uuid = se.get("uuid")
+                if se_uuid:
+                    se_vs_map.setdefault(se_uuid, set()).add(vs_uuid)
 
     resp = session.get("serviceengine-inventory")
     ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
@@ -57,20 +75,9 @@ def check_se_health() -> None:
         cfg_data = se.get("config", {}) or {}
         runtime = se.get("runtime", {}) or {}
         name = cfg_data.get("name", "N/A")
+        uuid = se.get("uuid") or cfg_data.get("uuid", "")
         oper = (runtime.get("oper_status", {}) or {}).get("state", "N/A")
-
-        # VS count — try multiple known field names across Controller versions.
-        # Fall back to aggregate counters if per-SE list is absent.
-        vs_list = (
-            runtime.get("se_vs_list")
-            or runtime.get("vs_ref")
-            or runtime.get("virtualservice_refs")
-            or []
-        )
-        vs_count = len(vs_list) if isinstance(vs_list, list) else 0
-        if vs_count == 0:
-            # Aggregate from vip_summary if available
-            vs_count = runtime.get("num_vs") or runtime.get("num_se_dps", 0)
+        vs_count = len(se_vs_map.get(uuid, set()))
 
         status_color = "green" if oper == "OPER_UP" else "red"
         console.print(
