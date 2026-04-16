@@ -36,9 +36,15 @@ class TestShowAnalytics:
         assert args[0] == "analytics/metrics/collection"
         body = kwargs.get("data") or (args[1] if len(args) > 1 else None)
         assert body is not None
-        assert body["entity_uuid"] == "vs-abc"
-        assert "metric_id" in body
-        assert body["step"] == "300"
+        # /analytics/metrics/collection is a *collections* API — queries must
+        # be wrapped in metric_requests[]. A top-level metric_id/entity_uuid
+        # yields HTTP 404 {"error": "Empty Request"}.
+        assert "metric_requests" in body
+        assert isinstance(body["metric_requests"], list)
+        req = body["metric_requests"][0]
+        assert req["entity_uuid"] == "vs-abc"
+        assert "metric_id" in req
+        assert req["step"] == 300
         # Must not call GET on the collection endpoint (would 404 on 22.x).
         for call in mock_avi_session.get.call_args_list:
             assert call.args[0] != "analytics/metrics/collection"
