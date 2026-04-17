@@ -1,3 +1,7 @@
+## v1.5.12 (2026-04-17)
+
+- Align with VMware skill family v1.5.12 (security & bug fixes from code review by @yjs-2026)
+
 ## v1.5.11 (2026-04-17)
 
 - Fix: vs_analytics HTTP 404 — AVI 22.x requires POST for `/analytics/metrics/collection` with `metric_requests[]` array wrapping (PR #4, credit @timwangbc)
