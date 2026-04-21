@@ -1,3 +1,10 @@
+## v1.5.13 (2026-04-21)
+
+**Bug fixes from code review 2026-04-20**
+
+- **fix:** `ako_sync.py` — sync diff now uses exact + suffix match instead of substring match, preventing false negatives (e.g. ingress "ing" no longer matches "staging")
+- **fix:** `ako_config.py` / `ako_multi_cluster.py` — all 7 `subprocess.run()` calls now have explicit `timeout` (30s kubectl, 120s helm, 300s upgrade) to prevent indefinite hangs
+
 ## v1.5.12 (2026-04-17)
 
 - Align with VMware skill family v1.5.12 (security & bug fixes from code review by @yjs-2026)

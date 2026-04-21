@@ -69,7 +69,10 @@ def show_sync_diff(context: str | None = None) -> None:
 
     for name in sorted(k8s_names):
         short = name.split("/")[-1]
-        if not any(short in avi_name for avi_name in avi_names):
+        if short not in avi_names and not any(
+            avi_name.endswith(f"-{short}") or avi_name.endswith(f"--{short}")
+            for avi_name in avi_names
+        ):
             table.add_row("Ingress", name, "[red]Missing on Controller[/red]")
 
     console.print(table)

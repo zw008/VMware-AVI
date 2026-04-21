@@ -16,6 +16,7 @@ def list_clusters() -> None:
         ["kubectl", "config", "get-contexts", "-o", "name"],
         capture_output=True,
         text=True,
+        timeout=30,
     )
     if result.returncode != 0:
         console.print(f"[red]Failed to list contexts: {result.stderr.strip()}[/red]")
@@ -38,6 +39,7 @@ def list_clusters() -> None:
             ],
             capture_output=True,
             text=True,
+            timeout=30,
         )
         if pod_check.returncode == 0 and pod_check.stdout:
             parts = pod_check.stdout.split(":", 1)
@@ -62,6 +64,7 @@ def show_amko_status() -> None:
         ],
         capture_output=True,
         text=True,
+        timeout=30,
     )
 
     console.print("\n[bold]AMKO Status[/bold]\n")
@@ -74,6 +77,7 @@ def show_amko_status() -> None:
         ["kubectl", "get", "gslbconfig", "-n", "avi-system", "-o", "yaml"],
         capture_output=True,
         text=True,
+        timeout=30,
     )
     if gslb_check.returncode == 0 and gslb_check.stdout.strip():
         console.print("\n[bold]GSLBConfig:[/bold]\n")

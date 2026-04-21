@@ -15,6 +15,7 @@ def show_ako_config(namespace: str = "avi-system") -> None:
         ["helm", "get", "values", "ako", "-n", namespace, "-o", "yaml"],
         capture_output=True,
         text=True,
+        timeout=120,
     )
     if result.returncode != 0:
         console.print(f"[red]Failed to get AKO values: {result.stderr.strip()}[/red]")
@@ -30,6 +31,7 @@ def diff_ako_config(namespace: str = "avi-system") -> None:
         ["helm", "diff", "upgrade", "ako", "avi/ako", "-n", namespace],
         capture_output=True,
         text=True,
+        timeout=120,
     )
     if result.returncode != 0:
         console.print(
@@ -60,7 +62,7 @@ def upgrade_ako(dry_run: bool = True, namespace: str = "avi-system") -> None:
         cmd.append("--dry-run")
         console.print("[bold]Dry-run mode (preview only):[/bold]\n")
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
         console.print(f"[red]Helm upgrade failed: {result.stderr.strip()}[/red]")
         raise SystemExit(1)
