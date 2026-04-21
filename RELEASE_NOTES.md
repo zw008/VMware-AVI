@@ -1,3 +1,10 @@
+## v1.5.14 (2026-04-21)
+
+**Bug fixes from code review by @yjs-2026 (follow-up)**
+
+- **fix:** `ako_ingress.py` — TLS secret checks now distinguish 404 (not found) from other errors (network, auth) instead of treating all exceptions as "not found"
+- **fix:** `ako_ingress.py` — backend service path now checks for None on `backend`, `service`, and `name` before accessing
+
 ## v1.5.13 (2026-04-21)
 
 **Bug fixes from code review 2026-04-20**

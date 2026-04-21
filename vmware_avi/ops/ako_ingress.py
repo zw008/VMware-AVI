@@ -56,8 +56,12 @@ def check_ingress_annotations(namespace: str, context: str | None = None) -> Non
                         k8s.core_v1(context).read_namespaced_secret(
                             tls.secret_name, namespace
                         )
-                    except Exception:
-                        issues.append(f"TLS secret '{tls.secret_name}' not found")
+                    except Exception as exc:
+                        err_msg = str(exc)
+                        if "404" in err_msg or "Not Found" in err_msg:
+                            issues.append(f"TLS secret '{tls.secret_name}' not found")
+                        else:
+                            issues.append(f"TLS secret '{tls.secret_name}' check failed: {err_msg[:100]}")
 
         status = "[green]OK[/green]" if not issues else "[red]ISSUES[/red]"
         table.add_row(name, ingress_class or "N/A", "; ".join(issues) or "-", status)
@@ -141,15 +145,22 @@ def diagnose_ingress(
             if tls.secret_name:
                 try:
                     k8s.core_v1(context).read_namespaced_secret(tls.secret_name, namespace)
-                except Exception:
-                    issues.append(f"TLS secret '{tls.secret_name}' missing")
-                    suggestions.append(f"Create secret: kubectl create secret tls {tls.secret_name} ...")
+                except Exception as exc:
+                    err_msg = str(exc)
+                    if "404" in err_msg or "Not Found" in err_msg:
+                        issues.append(f"TLS secret '{tls.secret_name}' missing")
+                        suggestions.append(f"Create secret: kubectl create secret tls {tls.secret_name} ...")
+                    else:
+                        issues.append(f"TLS secret '{tls.secret_name}' check failed: {err_msg[:100]}")
 
     # Check backend services exist
     if ing.spec.rules:
         for rule in ing.spec.rules:
             if rule.http and rule.http.paths:
                 for path in rule.http.paths:
+                    if not path.backend or not path.backend.service or not path.backend.service.name:
+                        issues.append("Path has no backend service configured")
+                        continue
                     svc_name = path.backend.service.name
                     try:
                         k8s.core_v1(context).read_namespaced_service(svc_name, namespace)
