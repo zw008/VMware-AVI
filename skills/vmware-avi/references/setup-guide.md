@@ -24,7 +24,7 @@ Complete installation, configuration, and AI platform integration guide for vmwa
 uv tool install vmware-avi
 ```
 
-This installs the CLI (`vmware-avi`), MCP server entry point (`vmware-avi-mcp`), and all Python dependencies in an isolated environment.
+This installs the CLI (`vmware-avi`, with `vmware-avi mcp` subcommand for the MCP server in v1.5.15+), the legacy `vmware-avi-mcp` entry point (for backward compatibility), and all Python dependencies in an isolated environment.
 
 ### Development Install
 
@@ -204,8 +204,8 @@ Add to `~/.claude.json` (global) or `.mcp.json` (project-level):
 {
   "mcpServers": {
     "vmware-avi": {
-      "command": "uvx",
-      "args": ["--from", "vmware-avi", "vmware-avi-mcp"],
+      "command": "vmware-avi",
+      "args": ["mcp"],
       "env": {
         "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml"
       }
@@ -213,6 +213,11 @@ Add to `~/.claude.json` (global) or `.mcp.json` (project-level):
   }
 }
 ```
+
+> v1.5.15+ recommends the single-command form `vmware-avi mcp`. Pre-1.5.15 used
+> `uvx --from vmware-avi vmware-avi-mcp`, which still works but re-resolves from
+> PyPI on each launch and breaks behind corporate TLS proxies. The legacy
+> `vmware-avi-mcp` entry point is also kept for backward compatibility.
 
 ### Cursor
 
@@ -222,8 +227,8 @@ Add to `.cursor/mcp.json` in your project root:
 {
   "mcpServers": {
     "vmware-avi": {
-      "command": "uvx",
-      "args": ["--from", "vmware-avi", "vmware-avi-mcp"],
+      "command": "vmware-avi",
+      "args": ["mcp"],
       "env": {
         "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml"
       }
@@ -252,7 +257,7 @@ vmware-avi vs list
 vmware-avi ako status
 ```
 
-If your Ollama setup supports MCP via a bridge (e.g., `mcp-bridge`), use the same `uvx --from` command.
+If your Ollama setup supports MCP via a bridge (e.g., `mcp-bridge`), use the same `vmware-avi mcp` command (v1.5.15+).
 
 ## Troubleshooting
 
@@ -283,10 +288,21 @@ echo 'PROD_AVI_PASSWORD=yourpassword' >> ~/.vmware-avi/.env
 
 ### MCP server not starting
 
-1. Verify the entry point exists: `which vmware-avi-mcp`
-2. If using `uvx`, ensure the package is installed: `uvx --from vmware-avi vmware-avi-mcp --help`
+1. Verify the CLI is on PATH: `which vmware-avi`
+2. Confirm the `mcp` subcommand: `vmware-avi mcp --help` (v1.5.15+)
 3. Check that `~/.vmware-avi/config.yaml` exists (MCP server loads config on startup)
-4. Never use `python -m mcp_server` -- always use `uvx --from` (isolated environment requires entry point)
+4. Legacy: `which vmware-avi-mcp` and `vmware-avi-mcp --help` still work
+5. Never use `python -m mcp_server` — always use `vmware-avi mcp` (v1.5.15+) or the legacy `vmware-avi-mcp` entry point
+
+### `invalid peer certificate: UnknownIssuer` (uvx)
+
+A corporate TLS proxy is intercepting `https://pypi.org` and uv's bundled cert
+store doesn't trust the proxy CA. Fixes (in order of preference):
+
+1. Use the v1.5.15+ form `vmware-avi mcp` — no PyPI roundtrip needed.
+2. Tell uv to use the system cert store: `export UV_NATIVE_TLS=true` (or pass
+   `--native-tls` to `uvx`).
+3. Point uv at an explicit CA bundle: `export SSL_CERT_FILE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem`
 
 ### kubectl / helm not found
 

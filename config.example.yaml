@@ -8,6 +8,8 @@ controllers:
     api_version: "22.1.4"
     tenant: admin
     port: 443
+    # verify_ssl: true is the default (v1.5.15+). AVI Controllers commonly ship
+    # with self-signed certs — set to false explicitly for those environments.
     verify_ssl: true
 
   # Add more controllers as needed:

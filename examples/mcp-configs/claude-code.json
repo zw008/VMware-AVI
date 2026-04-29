@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "vmware-avi": {
-      "command": "uvx",
-      "args": ["--from", "vmware-avi", "vmware-avi-mcp"],
+      "command": "vmware-avi",
+      "args": ["mcp"],
       "env": {
         "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml"
       }

@@ -277,12 +277,14 @@ vmware-avi ako amko status
 
 The MCP server exposes all 29 tools via the [Model Context Protocol](https://modelcontextprotocol.io). Works with any MCP-compatible client.
 
+**After `uv tool install vmware-avi`, start the MCP server with one command** (v1.5.15+):
+
 ```bash
-# Run via uvx (recommended)
-uvx --from vmware-avi vmware-avi-mcp
+# Recommended — single command, no network re-resolve
+vmware-avi mcp
 
 # With custom config path
-VMWARE_AVI_CONFIG=/path/to/config.yaml uvx --from vmware-avi vmware-avi-mcp
+VMWARE_AVI_CONFIG=/path/to/config.yaml vmware-avi mcp
 ```
 
 ### Claude Desktop Config
@@ -293,8 +295,8 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "vmware-avi": {
-      "command": "uvx",
-      "args": ["--from", "vmware-avi", "vmware-avi-mcp"],
+      "command": "vmware-avi",
+      "args": ["mcp"],
       "env": {
         "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml"
       }
@@ -302,6 +304,22 @@ Add to `claude_desktop_config.json`:
   }
 }
 ```
+
+<details>
+<summary>Alternative: uvx (no install) or legacy entry point</summary>
+
+```bash
+# Run without installing (requires PyPI access each launch)
+uvx --from vmware-avi vmware-avi mcp
+
+# Legacy entry point (still works, kept for backward compatibility)
+vmware-avi-mcp
+```
+
+> **Behind a corporate TLS proxy?** uvx may fail with `invalid peer certificate: UnknownIssuer`.
+> Use the recommended `vmware-avi mcp` form above (no network needed), or set `UV_NATIVE_TLS=true`.
+
+</details>
 
 ### MCP Tools (29)
 

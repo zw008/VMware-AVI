@@ -1,3 +1,12 @@
+## v1.5.15 (2026-04-29)
+
+**UX improvements from real user feedback**
+
+- **feat:** New top-level CLI subcommand `vmware-avi mcp` starts the MCP server. Single command after `uv tool install vmware-avi` — no more `uvx --from`, no PyPI re-resolve, no TLS-proxy issues.
+- **feat:** Default `verify_ssl: true` on new targets (was `false`). AVI Controller with default self-signed certs requires explicit `verify_ssl: false` in `config.yaml`.
+- **docs:** README, SKILL.md, setup-guide.md, and `examples/mcp-configs/*.json` switched to `command: "vmware-avi"`, `args: ["mcp"]`. uvx form moved to fallback with TLS-proxy troubleshooting note.
+- **compat:** Legacy `vmware-avi-mcp` console script kept — existing user configs continue to work.
+
 ## v1.5.14 (2026-04-21)
 
 **Bug fixes from code review by @yjs-2026 (follow-up)**

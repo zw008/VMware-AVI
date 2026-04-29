@@ -277,12 +277,14 @@ vmware-avi ako amko status
 
 MCP server 通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露全部 29 个工具，适配任何 MCP 兼容客户端。
 
+**v1.5.15+ 推荐方式**：完成 `uv tool install vmware-avi` 后，**一条命令启动 MCP**：
+
 ```bash
-# 通过 uvx 启动（推荐）
-uvx --from vmware-avi vmware-avi-mcp
+# 推荐 — 单命令，无网络依赖
+vmware-avi mcp
 
 # 指定配置路径
-VMWARE_AVI_CONFIG=/path/to/config.yaml uvx --from vmware-avi vmware-avi-mcp
+VMWARE_AVI_CONFIG=/path/to/config.yaml vmware-avi mcp
 ```
 
 ### Claude Desktop 配置
@@ -293,8 +295,8 @@ VMWARE_AVI_CONFIG=/path/to/config.yaml uvx --from vmware-avi vmware-avi-mcp
 {
   "mcpServers": {
     "vmware-avi": {
-      "command": "uvx",
-      "args": ["--from", "vmware-avi", "vmware-avi-mcp"],
+      "command": "vmware-avi",
+      "args": ["mcp"],
       "env": {
         "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml"
       }
@@ -302,6 +304,22 @@ VMWARE_AVI_CONFIG=/path/to/config.yaml uvx --from vmware-avi vmware-avi-mcp
   }
 }
 ```
+
+<details>
+<summary>备选方案：uvx（不安装）或 legacy 入口</summary>
+
+```bash
+# 不想安装，临时运行（每次需要联网 resolve 依赖）
+uvx --from vmware-avi vmware-avi mcp
+
+# 旧 entry point（仍可用，向后兼容）
+vmware-avi-mcp
+```
+
+> **公司 TLS 代理网络下？** uvx 可能报 `invalid peer certificate: UnknownIssuer`。
+> 推荐使用上面的 `vmware-avi mcp`（无需联网），或 `export UV_NATIVE_TLS=true`。
+
+</details>
 
 ### MCP 工具列表（29 个）
 

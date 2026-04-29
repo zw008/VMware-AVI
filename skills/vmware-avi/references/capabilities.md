@@ -1,6 +1,6 @@
 # VMware AVI Capabilities
 
-All 29 MCP tools exposed by `vmware-avi-mcp`, organized by category.
+All 29 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
 
 ## Traditional Mode — AVI Controller (12 tools)
 

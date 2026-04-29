@@ -47,6 +47,20 @@ def doctor() -> None:
     raise SystemExit(0 if ok else 1)
 
 
+@app.command("mcp")
+def mcp_cmd() -> None:
+    """Start the MCP server (stdio transport).
+
+    Single-command entry point for MCP clients:
+        vmware-avi mcp
+
+    Equivalent to the legacy `vmware-avi-mcp` console script.
+    """
+    from mcp_server.server import main as _mcp_main
+
+    _mcp_main()
+
+
 @app.command()
 def init() -> None:
     """Generate config.yaml and .env templates."""
