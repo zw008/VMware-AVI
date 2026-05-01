@@ -94,32 +94,38 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 
 ### Maintenance Window — Drain a Pool Member
 
-When taking a backend server offline for patching, you need to drain traffic gracefully before maintenance and restore it after:
+**Pre-flight (judgment — affects live traffic)**:
+- Capacity check: pool must have ≥ 2 healthy members. Disabling the only-other-healthy member is a self-DoS. Verify with `pool members my-pool` first.
+- Connection persistence: if VS uses session persistence (cookie/source-IP), existing sessions stay pinned to the disabled member until they expire. "Drain" is not instant — 5-30 min depending on persistence TTL.
+- Long-lived connections: WebSocket/streaming sessions can hold for hours. Decide upfront: hard-disconnect (faster, user-visible) or wait (slower, transparent).
+- Observability: enable analytics on the VS BEFORE disabling — you need the baseline to detect degradation.
 
-1. List pool members and health → `vmware-avi pool members my-pool`
-2. Disable the target server (graceful drain) → `vmware-avi pool disable my-pool &lt;server-ip&gt;`
-3. Wait for active connections to drain (monitor analytics) → `vmware-avi analytics my-vs`
-4. Perform maintenance on the server
-5. Re-enable the server → `vmware-avi pool enable my-pool &lt;server-ip&gt;`
-6. Verify health status is green → `vmware-avi pool members my-pool`
+**Steps**:
+1. `pool members my-pool` → confirm ≥ 2 healthy members and identify session persistence config
+2. `pool disable my-pool <server-ip>` (graceful drain — new connections stop, existing finish)
+3. `analytics my-vs --duration 15m` → watch active connection count to the drained member trend toward zero
+4. Perform maintenance only after active connections = 0 (or you've decided to hard-disconnect)
+5. `pool enable my-pool <server-ip>` → re-enable
+6. **Verify** before declaring success: health monitor passes (typically 30-90 sec) AND new connections are landing on the member (analytics drill-down)
 
 ### AKO Ingress Not Creating VS
 
-When a developer reports their Ingress isn't producing a Virtual Service, the typical debugging path is:
+**Judgment**: this is a layered failure — figure out which layer broke before randomly probing. AKO is a controller; like all K8s controllers, the failure modes are: (a) controller down, (b) controller running but seeing wrong inputs, (c) controller acting but Avi rejecting outputs.
 
-1. Check AKO is running → `vmware-avi ako status`
-2. Validate Ingress annotations → `vmware-avi ako ingress check <namespace>`
-3. Check sync status → `vmware-avi ako sync status`
-4. If annotations are wrong → `vmware-avi ako ingress diagnose <ingress-name>` (shows what's wrong and suggests fix)
-5. If sync is drifted → review diff `vmware-avi ako sync diff` and force resync if needed
+1. `ako status` → controller running, recent reconciles, no panic logs? If not, fix here first
+2. `ako ingress check <namespace>` → required annotations present? Common miss: `kubernetes.io/ingress.class`, `aviinfrasetting.ako.vmware.com/name`
+3. `ako sync status` → drift between K8s state and Avi state. Drift > a few minutes usually means controller error
+4. `ako ingress diagnose <ingress-name>` → AKO's own diagnostic; often pinpoints the issue
+5. If sync drifted: `ako sync diff` → review what's missing on Avi side. **Force resync only after** you understand why drift happened — blind resync masks bugs that will recur
 
 ### SSL Certificate Expiry Audit
 
-Expired certificates cause outages. Run periodic checks across all controllers:
+**Judgment**: cert expiry is the most preventable outage in the LB world. Run this regularly, not reactively. The 30-day window is a minimum — for prod, set 60+ to allow renewal lead time.
 
-1. Check all certificates → `vmware-avi ssl expiry --days 30`
-2. Review which VS uses each expiring cert → output includes VS mapping
-3. Plan renewal with the certificate team
+1. `ssl expiry --days 60` → catch certs expiring within 60 days, not 30; enterprise renewal cycles take 2-4 weeks
+2. Cross-reference VS mapping (in output) → identify which apps are at risk; some certs may be unused (orphans, candidates for cleanup)
+3. **Decision**: certs marked `unused` (no VS) → propose deletion as part of audit; certs `in_use` → escalate to cert team with VS list and exact expiry date
+4. Schedule a follow-up rescan post-renewal (not just rely on cert team confirming)
 
 ## Usage Mode
 
