@@ -1420,7 +1420,7 @@ wheels = [
 
 [[package]]
 name = "vmware-avi"
-version = "1.5.15"
+version = "1.5.17"
 source = { editable = "." }
 dependencies = [
     { name = "avisdk" },
@@ -1434,7 +1434,7 @@ dependencies = [
     { name = "vmware-policy" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1448,15 +1448,18 @@ requires-dist = [
     { name = "kubernetes", specifier = ">=28.0,<33.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.0,<2.0" },
     { name = "pyaml", specifier = ">=24.0,<27.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0,<10.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0,<8.0" },
     { name = "python-dotenv", specifier = ">=1.0,<2.0" },
     { name = "rich", specifier = ">=13.0,<15.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5,<1.0" },
     { name = "typer", specifier = ">=0.12,<1.0" },
     { name = "vmware-policy", specifier = ">=1.0.0,<2.0" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.0,<10.0" },
+    { name = "pytest-cov", specifier = ">=5.0,<8.0" },
+    { name = "ruff", specifier = ">=0.5,<1.0" },
+]
 
 [[package]]
 name = "vmware-policy"
