@@ -1,0 +1,15 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      config_path:
+        type: string
+        description: "Path to vmware-avi config.yaml (default: ~/.vmware-avi/config.yaml)"
+    required: []
+  commandFunction: |
+    (config) => ({
+      command: "python",
+      args: ["-m", "mcp_server"],
+      env: config.config_path ? { VMWARE_AVI_CONFIG: config.config_path } : {}
+    })
