@@ -481,6 +481,23 @@ Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists
 
 ---
 
+## Version Compatibility
+
+| AVI Controller / Environment | Support | Notes |
+|------------------------------|---------|-------|
+| AVI 30.x in VCF 9.1 | ✅ Full | avisdk 30.x line covers VCF 9.1 bundle |
+| AVI 30.x in VCF 9.0 | ✅ Full | Standard AVI / NSX ALB integration |
+| AVI 22.x — 31.x standalone | ✅ Full | Pin `avisdk>=22.1,<31.0` |
+| AKO 1.10+ | ✅ Full | Kubernetes integration via AKO ConfigMap / GatewayClass |
+
+#### Official Broadcom References
+
+- **SDKs**: <https://developer.broadcom.com/sdks> — VCF Python SDK
+- **REST APIs**: <https://developer.broadcom.com/xapis> — AVI Controller REST API
+- **CLI Tools**: <https://developer.broadcom.com/tools> — VCF PowerCLI 9.1
+
+---
+
 ## Troubleshooting & Contributing
 
 If you encounter any errors or issues, please send the error message, logs, or screenshots to **zhouwei008@gmail.com**. Contributions are welcome -- feel free to join us in maintaining and improving this project!

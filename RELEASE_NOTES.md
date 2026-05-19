@@ -1,3 +1,11 @@
+## v1.5.23 (2026-05-19)
+
+**VCF 9.0 / 9.1 compatibility declared.**
+
+- **docs:** README now lists AVI / NSX ALB on VCF 9.0 / 9.1 as ✅ Full. The avisdk dependency (`>=22.1,<31.0`) covers AVI Controller versions bundled with VCF 9.x.
+- **docs:** Added `Official Broadcom References` pointer to [VCF Python SDK](https://developer.broadcom.com/sdks) and the [AVI Controller REST API docs](https://developer.broadcom.com/xapis).
+- **align:** Family v1.5.23 — all 9 skills tracking VCF 9.0 / 9.1 compatibility declaration.
+
 ## v1.5.22 (2026-05-08)
 
 **Smithery onboarding** — `vmware-avi` is now installable via Smithery.
