@@ -4,7 +4,6 @@ Exposes 29 tools for AVI Controller + AKO K8s operations.
 Entry point: vmware-avi-mcp (defined in pyproject.toml).
 """
 
-from __future__ import annotations
 
 import logging
 from io import StringIO
