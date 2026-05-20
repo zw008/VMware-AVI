@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from io import StringIO
+from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from vmware_policy import vmware_tool
@@ -54,7 +55,7 @@ def _capture_output(func, *args, **kwargs) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def vs_list(controller: str | None = None) -> str:
+def vs_list(controller: Optional[str] = None) -> str:
     """[READ] List all Virtual Services with name, VIP, enabled state, and health score.
 
     Use this for an overview before drilling into a specific VS with vs_status.
@@ -108,7 +109,7 @@ def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def pool_list(vs_filter: str | None = None) -> str:
+def pool_list(vs_filter: Optional[str] = None) -> str:
     """[READ] Discover pools on the Controller.
 
     Use this BEFORE pool_members when you don't know exact pool names — pools often have
@@ -255,7 +256,7 @@ def se_health() -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_status(context: str | None = None) -> str:
+def ako_status(context: Optional[str] = None) -> str:
     """[READ] Check AKO (AVI Kubernetes Operator) pod status — running, restarts, age, and ready state.
 
     First step when troubleshooting Ingress or LoadBalancer issues in Tanzu/K8s.
@@ -269,7 +270,7 @@ def ako_status(context: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_logs(tail: int = 100, since: str | None = None) -> str:
+def ako_logs(tail: int = 100, since: Optional[str] = None) -> str:
     """[READ] View AKO pod logs to debug Ingress creation failures, sync errors, or AVI Controller connectivity issues.
 
     Use 'since' to narrow the time window.
@@ -284,7 +285,7 @@ def ako_logs(tail: int = 100, since: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
 @vmware_tool(risk_level="high")
-def ako_restart(context: str | None = None, confirmed: bool = False) -> str:
+def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
     """[WRITE] Restart AKO pod by deleting it (K8s recreates automatically).
 
     Use when AKO is stuck or after config changes. Brief traffic disruption possible during restart.
@@ -310,7 +311,7 @@ def ako_restart(context: str | None = None, confirmed: bool = False) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_version(context: str | None = None) -> str:
+def ako_version(context: Optional[str] = None) -> str:
     """[READ] Show AKO version, Helm chart version, and container image tag.
 
     Use to verify AKO version compatibility with AVI Controller.
@@ -357,7 +358,7 @@ def ako_config_upgrade(dry_run: bool = True) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_ingress_check(namespace: str, context: str | None = None) -> str:
+def ako_ingress_check(namespace: str, context: Optional[str] = None) -> str:
     """[READ] Validate Ingress annotations in a namespace — checks for unsupported or misspelled AKO annotations that prevent VS creation.
 
     Args:
@@ -370,7 +371,7 @@ def ako_ingress_check(namespace: str, context: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_ingress_map(context: str | None = None) -> str:
+def ako_ingress_map(context: Optional[str] = None) -> str:
     """[READ] Show mapping between K8s Ingress resources and AVI Virtual Services.
 
     Use to verify which Ingresses have corresponding VS objects.
@@ -384,7 +385,7 @@ def ako_ingress_map(context: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_ingress_diagnose(name: str, namespace: str = "default", context: str | None = None) -> str:
+def ako_ingress_diagnose(name: str, namespace: str = "default", context: Optional[str] = None) -> str:
     """[READ] Diagnose why a specific Ingress has no corresponding Virtual Service.
 
     Checks annotations, TLS config, service endpoints, and AKO logs for errors.
@@ -400,7 +401,7 @@ def ako_ingress_diagnose(name: str, namespace: str = "default", context: str | N
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_ingress_fix_suggest(name: str, namespace: str = "default", context: str | None = None) -> str:
+def ako_ingress_fix_suggest(name: str, namespace: str = "default", context: Optional[str] = None) -> str:
     """[READ] Suggest specific fixes for Ingress issues — returns actionable kubectl commands or annotation corrections based on the diagnosed problem.
 
     Args:
@@ -414,7 +415,7 @@ def ako_ingress_fix_suggest(name: str, namespace: str = "default", context: str 
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_sync_status(context: str | None = None) -> str:
+def ako_sync_status(context: Optional[str] = None) -> str:
     """[READ] Check sync status between K8s resources and AVI Controller objects.
 
     Shows in-sync, pending, and error counts.
@@ -428,7 +429,7 @@ def ako_sync_status(context: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_sync_diff(context: str | None = None) -> str:
+def ako_sync_diff(context: Optional[str] = None) -> str:
     """[READ] Show specific inconsistencies between K8s Ingress/Service definitions and AVI Controller VS/Pool objects.
 
     Use to identify drift.
@@ -442,7 +443,7 @@ def ako_sync_diff(context: str | None = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
 @vmware_tool(risk_level="high")
-def ako_sync_force(context: str | None = None, confirmed: bool = False) -> str:
+def ako_sync_force(context: Optional[str] = None, confirmed: bool = False) -> str:
     """[WRITE] Force AKO to resync all K8s resources with AVI Controller.
 
     Use when drift is detected. May cause brief traffic disruption.
