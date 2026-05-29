@@ -2,6 +2,43 @@
 
 All 29 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
 
+## Version Compatibility
+
+### AVI Controller (NSX ALB)
+
+| Controller Version | Support Level | Notes |
+|--------------------|--------------|-------|
+| AVI 30.x | ✅ Full | All 29 tools verified. avisdk `<31.0` upper bound. |
+| AVI 22.1.x | ✅ Full | All analytics endpoint quirks fixed in v1.5.11 — `vs_analytics` uses POST `/analytics/metrics/collection` with `metric_requests[]`; `pool_list` uses `/virtualservice-inventory` to expose K8S-managed pool groups; SE→VS mapping reconstructed from `vip_summary[].service_engine[]`. |
+| AVI < 22.1 | ⚠ Untested | avisdk may load but analytics/inventory endpoints differ. Not in CI. |
+
+### VCF (VMware Cloud Foundation)
+
+| VCF Version | Bundled AVI / NSX ALB | Support |
+|-------------|-----------------------|---------|
+| VCF 9.1 | NSX ALB (avisdk >=22.1,<31.0 covers it) | ✅ Full (declared v1.5.23) |
+| VCF 9.0 | NSX ALB (avisdk >=22.1,<31.0 covers it) | ✅ Full (declared v1.5.23) |
+| VCF 5.x | AVI 22.x | ✅ Full |
+
+### Runtime
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Python | ≥ 3.11 | `requires-python` bumped from 3.10 to 3.11 in v1.5.19 (regression eval uses `tomllib`). |
+| avisdk | ≥ 22.1, < 31.0 | Auto-installed. Range chosen so VCF 9.x bundled AVI is covered without forcing a major SDK jump. |
+| kubernetes (Python) | ≥ 28.0 | Required only for AKO mode. |
+| kubectl | any recent | Required only for AKO operations. |
+| helm | ≥ 3.x | Required only for AKO config show/diff/upgrade. |
+
+### MCP Transport
+
+| Mode | Status | Recommended |
+|------|--------|-------------|
+| `vmware-avi mcp` (CLI subcommand, stdio) | ✅ Full | ✅ v1.5.15+ default — no PyPI re-resolve, works behind corporate TLS proxies. |
+| `vmware-avi-mcp` (legacy console script, stdio) | ✅ Full | Kept for backward compatibility with pre-1.5.15 configs. |
+| `python -m mcp_server` (stdio, via `__main__.py`) | ✅ Full | Container/Smithery deployments only — not for end-user CLI install. Added v1.5.22. |
+| `uvx --from vmware-avi vmware-avi-mcp` | ⚠ Fallback | Re-resolves PyPI on each launch; fails behind corporate TLS proxies (踩坑 #25). Use `UV_NATIVE_TLS=true` workaround. |
+
 ## Automation Level Reference
 
 Each operation is classified by autonomy level per the Enterprise Harness Engineering framework:

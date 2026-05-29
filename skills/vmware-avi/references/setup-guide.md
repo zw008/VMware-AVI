@@ -1,6 +1,6 @@
 # VMware AVI Setup Guide
 
-Complete installation, configuration, and AI platform integration guide for vmware-avi v1.4.0.
+Complete installation, configuration, and AI platform integration guide for the current `vmware-avi` release. Refer to `RELEASE_NOTES.md` in the repository for version-specific changes.
 
 ## Prerequisites
 
@@ -33,6 +33,48 @@ git clone https://github.com/zw008/VMware-AVI.git
 cd VMware-AVI
 uv pip install -e ".[dev]"
 ```
+
+### Alternative Deployment: Container / Smithery
+
+For platforms that prefer containerized MCP servers (e.g., Smithery registry, Kubernetes-hosted agents, isolated CI runners), `vmware-avi` ships a `Dockerfile` and `smithery.yaml` at the repository root (added v1.5.22).
+
+#### Docker
+
+Build and run the MCP server in a container. The image uses `python:3.12-slim` with `uv` for dependency installation and runs `python -m mcp_server` on stdio (no port exposed — MCP uses stdin/stdout).
+
+```bash
+git clone https://github.com/zw008/VMware-AVI.git
+cd VMware-AVI
+
+# Build
+docker build -t vmware-avi-mcp .
+
+# Run — mount your config directory into the container
+docker run -i --rm \
+  -v ~/.vmware-avi:/root/.vmware-avi:ro \
+  -e VMWARE_AVI_CONFIG=/root/.vmware-avi/config.yaml \
+  vmware-avi-mcp
+```
+
+The container's `CMD` is `python -m mcp_server`, which is wired through `mcp_server/__main__.py` to the same FastMCP entry point as the CLI subcommand. All 29 tools are available.
+
+#### Smithery
+
+`vmware-avi` is published on the [Smithery](https://smithery.ai) registry. The `smithery.yaml` at the repo root declares:
+
+- `startCommand.type: stdio` — Smithery launches the server over stdio
+- `configSchema.properties.config_path` — optional override for the config file location
+- `commandFunction` — invokes `python -m mcp_server` with `VMWARE_AVI_CONFIG` set from the user's Smithery config
+
+Users can install via the Smithery UI or CLI without managing Python environments locally. Smithery handles the container build and stdio bridge automatically.
+
+#### When to use which deployment
+
+| Deployment | Best For |
+|------------|----------|
+| `uv tool install vmware-avi` + `vmware-avi mcp` | Local developer workstation, single-user CLI + MCP |
+| Docker image | Self-hosted agents, CI runners, isolated environments, multi-user servers |
+| Smithery | Zero-install agent integration, registry-managed discovery, hosted-MCP workflows |
 
 ### Verify Installation
 

@@ -242,7 +242,9 @@ vmware-avi doctor            # verify Controller + K8s connectivity
 
 > All tools are automatically audited via vmware-policy. Audit logs: `vmware-audit log --last 20`
 
-> Full setup guide, security details, and AI platform compatibility: see `references/setup-guide.md`
+**Supported versions**: AVI Controller 22.1.x (analytics endpoint quirks fixed in v1.5.11) and 30.x. VCF 9.0 / 9.1 declared compatible (avisdk `>=22.1,<31.0` covers bundled AVI). Python 3.11+. Full table: `references/capabilities.md` → Version Compatibility.
+
+> Full setup guide, security details, AI platform compatibility, and container/Smithery deployment: see `references/setup-guide.md`
 
 ## Audit & Safety
 
