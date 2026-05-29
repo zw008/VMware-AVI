@@ -1,3 +1,13 @@
+## v1.5.29 (2026-05-29) — Version Compatibility Table + Smithery/Container Docs
+
+### Documentation
+- `references/capabilities.md`: new "Version Compatibility" section with 4 sub-tables (AVI Controller 22.1.x/30.x, VCF 9.0/9.1, Python 3.11+, MCP transport modes). Mirrors NSX capabilities.md style with ✅/⚠ markers. Closes v1.5.23 and v1.5.11 doc gaps.
+- `references/setup-guide.md`: replaced hardcoded "v1.4.0" header reference with "current release" + RELEASE_NOTES pointer; added "Alternative Deployment: Container / Smithery" section covering Docker build/run, Smithery registry, and a "When to use which" comparison table.
+- `SKILL.md`: 1-line "Supported versions" callout pointing to capabilities.md; extended setup-guide pointer to mention container/Smithery.
+
+### No code changes
+Documentation-only release.
+
 ## v1.5.28 (2026-05-20)
 
 **Fix `subclass() arg 1 must be a class` in goose/old mcp environments** —
