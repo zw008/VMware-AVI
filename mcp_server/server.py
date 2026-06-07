@@ -182,7 +182,15 @@ def pool_member_disable(pool: str, server: str, confirmed: bool = False) -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def ssl_list() -> str:
-    """[READ] List all SSL/TLS certificates on the AVI Controller with name, type, issuer, and expiry date."""
+    """[READ] List all SSL/TLS certificates stored on the AVI Controller.
+
+    Returns a table of certificate Name, Subject common name, Expiry date, and Type
+    (e.g. CA vs virtual-service certificate), plus a total count. The full set is
+    returned in one call — no pagination or filtering. No parameters required;
+    connects to the default controller from config. Use for certificate inventory
+    or to find a certificate's exact name; use ssl_expiry_check instead when you
+    only need certificates expiring within the next N days.
+    """
     from vmware_avi.ops.ssl_mgmt import list_certificates
     return _capture_output(list_certificates)
 
@@ -204,12 +212,19 @@ def ssl_expiry_check(days: int = 30) -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def vs_analytics(vs_name: str) -> str:
-    """[READ] Show analytics for a Virtual Service — throughput, latency percentiles, connection rate, and error breakdown.
+    """[READ] Show performance metrics for one Virtual Service over the last hour.
 
-    Use to investigate performance issues.
+    Queries the AVI analytics collection API with a fixed window: 12 samples at
+    5-minute granularity. Returns L4 metrics (avg bandwidth, completed and new
+    connections) and L7 metrics (avg response latency, % response errors, total
+    responses). Empty output means the VS had no traffic in the window or analytics
+    collection is disabled — not an error. Use when investigating throughput or
+    latency issues after vs_status shows degraded health; use vs_error_logs for
+    per-request error detail with a configurable time window.
 
     Args:
-        vs_name: Virtual Service name.
+        vs_name: Exact Virtual Service name, case-sensitive, as shown by vs_list.
+            Fails with a 'not found' message if no VS matches.
     """
     from vmware_avi.ops.analytics import show_analytics
     return _capture_output(show_analytics, vs_name)
@@ -233,7 +248,15 @@ def vs_error_logs(vs_name: str, since: str = "1h") -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def se_list() -> str:
-    """[READ] List all Service Engines with name, status, connected VS count, and resource usage."""
+    """[READ] List all Service Engines (AVI data-plane VMs) on the Controller.
+
+    Returns one row per SE: Name, management IP, operational status (e.g. OPER_UP),
+    and SE Group. The full list is returned in one call — no pagination or
+    filtering. No parameters required; connects to the default controller from
+    config. Use to inventory data-plane capacity or find an SE's name and IP; use
+    se_health instead for CPU/memory/disk usage and connected-VS counts when
+    investigating degraded Virtual Service health.
+    """
     from vmware_avi.ops.se_mgmt import list_service_engines
     return _capture_output(list_service_engines)
 
@@ -385,14 +408,20 @@ def ako_ingress_map(context: Optional[str] = None) -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def ako_ingress_diagnose(name: str, namespace: str = "default", context: Optional[str] = None) -> str:
-    """[READ] Diagnose why a specific Ingress has no corresponding Virtual Service.
+    """[READ] Diagnose why a specific Ingress has no corresponding AVI Virtual Service.
 
-    Checks annotations, TLS config, service endpoints, and AKO logs for errors.
+    Reads the Ingress and validates three things: IngressClass is 'avi' or 'avi-lb',
+    each referenced TLS secret exists, and every backend Service exists in the
+    namespace. Returns the Ingress annotations, a numbered issue list, and concrete
+    fix suggestions (kubectl commands). If configuration is clean, it points you to
+    ako_logs and ako_sync_status as next steps. Use ako_ingress_map first to find
+    which Ingresses are missing a VS, then diagnose one here.
 
     Args:
-        name: Ingress resource name.
-        namespace: K8s namespace (default 'default').
-        context: K8s context name (optional).
+        name: Exact Ingress resource name. Fails with 'not found' if absent.
+        namespace: K8s namespace containing the Ingress (default 'default').
+        context: kubeconfig context name (optional; uses current context).
+            Discover context names with ako_clusters.
     """
     from vmware_avi.ops.ako_ingress import diagnose_ingress
     return _capture_output(diagnose_ingress, name, namespace, context)
@@ -469,7 +498,15 @@ def ako_sync_force(context: Optional[str] = None, confirmed: bool = False) -> st
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def ako_clusters() -> str:
-    """[READ] List all K8s clusters that have AKO deployed, with version and status."""
+    """[READ] List every Kubernetes context in the active kubeconfig and whether AKO is deployed there.
+
+    Iterates contexts from `kubectl config get-contexts` (KUBECONFIG env var or
+    ~/.kube/config) and probes the avi-system namespace in each. Returns a table of
+    Context, AKO Status (pod phase, or 'Not deployed'), and AKO Version (image tag).
+    No parameters or filtering — all contexts are checked, so unreachable clusters
+    add latency. Requires kubectl on PATH. Start here to discover context names,
+    then pass one as `context` to ako_status, ako_logs, or ako_ingress_diagnose.
+    """
     from vmware_avi.ops.ako_multi_cluster import list_clusters
     return _capture_output(list_clusters)
 
@@ -477,9 +514,15 @@ def ako_clusters() -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def ako_cluster_overview() -> str:
-    """[READ] Cross-cluster AKO overview — VS count, pool count, health summary per cluster.
+    """[READ] Fleet-wide AKO health summary across all Kubernetes contexts in the active kubeconfig.
 
-    Use for multi-cluster fleet health assessment.
+    Returns one row per context (from KUBECONFIG env var or ~/.kube/config): AKO pod
+    phase (Running / Pending / 'Not deployed') and AKO version from the container
+    image tag. No parameters; every context is probed via kubectl, so slow or
+    unreachable clusters add latency. Use for a quick multi-cluster health check
+    answering "is AKO up everywhere, and on which version?". For single-cluster
+    detail, follow up with ako_status or ako_version passing a specific `context`;
+    for GSLB federation health use ako_amko_status.
     """
     from vmware_avi.ops.ako_multi_cluster import list_clusters
     return _capture_output(list_clusters)
