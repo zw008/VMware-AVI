@@ -1,3 +1,25 @@
+## v1.5.32 (2026-06-08) — Metric/field corrections + AKO helm/AMKO discovery fixes
+
+### Fixed
+- Latency metric is `l7_client.avg_client_txn_latency` (`avg_resp_latency`
+  never existed in the AVI metrics catalog).
+- SE listing reads `serviceengine-inventory` (the config object has no
+  `oper_status` — the Status column was always N/A).
+- SE→VS mapping derives the SE UUID from the `ref` URL (VipSeAssigned has no
+  `uuid` field — VS counts were always 0).
+- AKO helm: upgrades pull the official OCI chart
+  (`oci://projects.packages.broadcom.com/ako/helm-charts/ako`) and the release
+  name is discovered dynamically (official installs use `--generate-name`;
+  the previous `avi/ako` alias + hardcoded `ako` release never worked).
+- AMKO detection uses the chart's real labels (`app.kubernetes.io/name=amko`).
+- Controller logout via POST (was DELETE → 405, silently swallowed; sessions
+  never invalidated server-side).
+- Error-log filter `ge(response_code,400)` (no longer flags 2xx/3xx as errors).
+
+### Tests & docs
+- +19 shape regression tests incl. a source scan that fails if the invented
+  metric ID reappears; test-infra repairs; docs synced (30 tools).
+
 ## v1.5.30 (2026-06-07) — Tool description quality (Glama TDQS)
 
 ### Improved
