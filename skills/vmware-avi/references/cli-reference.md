@@ -38,15 +38,15 @@ Complete command reference for the `vmware-avi` CLI (v1.4.0).
 
 | Command | Description | Arguments / Flags |
 |---------|-------------|-------------------|
-| `vmware-avi se list` | List all Service Engines | -- |
-| `vmware-avi se health` | Check Service Engine health and resource usage | -- |
+| `vmware-avi se list` | List all Service Engines: name, mgmt IP, operational status, SE group (status from the `serviceengine-inventory` endpoint, config + runtime merged) | -- |
+| `vmware-avi se health` | Check Service Engine health: per-SE operational status + connected-VS counts (placement map from `virtualservice-inventory`) | -- |
 
 ## Analytics Commands
 
 | Command | Description | Arguments / Flags |
 |---------|-------------|-------------------|
-| `vmware-avi analytics <vs-name>` | Show VS analytics (throughput, latency, errors) | `<vs-name>` (required) |
-| `vmware-avi logs <vs-name>` | Show VS request error logs | `<vs-name>` (required), `--since <range>` (default: `1h`, e.g. `30m`, `2h`) |
+| `vmware-avi analytics <vs-name>` | Show VS analytics: L4 bandwidth/connections + L7 client transaction latency (`l7_client.avg_client_txn_latency`), response errors, total responses | `<vs-name>` (required) |
+| `vmware-avi logs <vs-name>` | Show VS request error logs (HTTP status ≥ 400, filter `ge(response_code,400)`) | `<vs-name>` (required), `--since <range>` (default: `1h`, e.g. `30m`, `2h`) |
 
 ## AKO Pod Commands (`vmware-avi ako`)
 
@@ -54,16 +54,16 @@ Complete command reference for the `vmware-avi` CLI (v1.4.0).
 |---------|-------------|-------------------|
 | `vmware-avi ako status` | Check AKO pod status (Running, CrashLoopBackOff, etc.) | `--context <k8s-context>` (optional) |
 | `vmware-avi ako logs` | View AKO pod logs | `--tail <N>` (default: 100), `--since <range>` (e.g. `30m`), `--context <k8s-context>` (optional) |
-| `vmware-avi ako restart` | Restart AKO pod (rolling restart) | `--context <k8s-context>` (optional). **Double-confirm required.** |
+| `vmware-avi ako restart` | Restart AKO pod by deleting it (its StatefulSet recreates it) | `--context <k8s-context>` (optional). **Double-confirm required.** |
 | `vmware-avi ako version` | Show AKO version info (image tag, Helm chart version) | `--context <k8s-context>` (optional) |
 
 ## AKO Config Commands (`vmware-avi ako config-*`)
 
 | Command | Description | Arguments / Flags |
 |---------|-------------|-------------------|
-| `vmware-avi ako config-show` | Show current AKO Helm values.yaml | -- |
-| `vmware-avi ako config-diff` | Show pending Helm changes (diff current vs desired) | -- |
-| `vmware-avi ako config-upgrade` | Helm upgrade AKO with updated values | `--dry-run` / `--no-dry-run` (default: `--dry-run`). **Double-confirm required for actual apply.** |
+| `vmware-avi ako config-show` | Show current AKO Helm values.yaml (release auto-discovered via `helm list` — official installs use `--generate-name`) | -- |
+| `vmware-avi ako config-diff` | Show pending Helm changes (diff against the official Broadcom OCI chart `oci://projects.packages.broadcom.com/ako/helm-charts/ako`) | -- |
+| `vmware-avi ako config-upgrade` | Helm upgrade the discovered AKO release from the official Broadcom OCI chart with `--reuse-values` | `--dry-run` / `--no-dry-run` (default: `--dry-run`). **Double-confirm required for actual apply.** |
 
 ## AKO Ingress Commands (`vmware-avi ako ingress-*`)
 

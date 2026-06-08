@@ -12,13 +12,19 @@ console = Console()
 
 
 def list_service_engines() -> None:
-    """List all Service Engines."""
+    """List all Service Engines.
+
+    Uses ``GET serviceengine-inventory`` (config + runtime merged) — the
+    ServiceEngine CONFIG object returned by ``GET serviceengine`` has no
+    ``oper_status``, so reading status from it always rendered N/A. Same
+    pattern as ``check_se_health`` below.
+    """
     cfg = load_config()
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = session.get("serviceengine")
-    ses = resp.json().get("results", [])
+    resp = session.get("serviceengine-inventory")
+    ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
 
     table = Table(title="Service Engines")
     table.add_column("Name")
@@ -27,11 +33,13 @@ def list_service_engines() -> None:
     table.add_column("SE Group")
 
     for se in ses:
-        name = se.get("name", "")
-        mgmt_ip = se.get("mgmt_vnic", {}).get("vnic_networks", [{}])[0].get(
-            "ip", {}).get("ip_addr", {}).get("addr", "N/A")
-        oper = se.get("oper_status", {}).get("state", "N/A")
-        se_group = se.get("se_group_ref", "").split("/")[-1].split("?")[0]
+        cfg_data = se.get("config", {}) or {}
+        runtime = se.get("runtime", {}) or {}
+        name = cfg_data.get("name", "")
+        vnics = (cfg_data.get("mgmt_vnic") or {}).get("vnic_networks") or [{}]
+        mgmt_ip = vnics[0].get("ip", {}).get("ip_addr", {}).get("addr", "N/A")
+        oper = (runtime.get("oper_status", {}) or {}).get("state", "N/A")
+        se_group = (cfg_data.get("se_group_ref") or "").split("/")[-1].split("?")[0]
         table.add_row(name, mgmt_ip, oper, se_group)
 
     console.print(table)
@@ -63,7 +71,12 @@ def check_se_health() -> None:
         runtime = vs.get("runtime") or {}
         for vip in runtime.get("vip_summary") or []:
             for se in vip.get("service_engine") or []:
-                se_uuid = se.get("uuid")
+                # VipSeAssigned has no `uuid` field — the SE identity comes
+                # as a ref/url like ".../api/serviceengine/<uuid>#<name>".
+                # Keep the uuid lookup first for builds that inject it.
+                se_uuid = se.get("uuid") or (
+                    se.get("ref") or se.get("url") or ""
+                ).rsplit("/", 1)[-1].split("#")[0]
                 if se_uuid:
                     se_vs_map.setdefault(se_uuid, set()).add(vs_uuid)
 

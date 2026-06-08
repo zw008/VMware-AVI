@@ -66,9 +66,12 @@ class TestAuditLogOperation:
         assert entry["parameters"] == {}
 
     def test_handles_write_error_gracefully(self, tmp_path: Path) -> None:
+        # Block directory creation by putting a regular FILE where the audit
+        # log's parent directory would go: mkdir(parents=True) then raises an
+        # OSError (NotADirectoryError) that log_operation must swallow.
+        # (Patching mkdir on a PosixPath instance is impossible — Path
+        # instance attributes are read-only.)
+        (tmp_path / "no_dir").write_text("")
         bad_path = tmp_path / "no_dir" / "deep" / "audit.log"
-        # parent.mkdir is called inside log_operation, so this should succeed.
-        # But if we make the root unwritable, it should not raise.
         with patch("vmware_avi.notify.audit.AUDIT_LOG", bad_path):
-            with patch("vmware_avi.notify.audit.AUDIT_LOG.parent.mkdir", side_effect=OSError("denied")):
-                log_operation("fail_write", "x")  # should not raise
+            log_operation("fail_write", "x")  # should not raise

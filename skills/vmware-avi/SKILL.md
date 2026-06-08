@@ -27,7 +27,7 @@ compatibility: >
 
 > **Disclaimer**: This is a community-maintained open-source project and is **not affiliated with, endorsed by, or sponsored by VMware, Inc. or Broadcom Inc.** "VMware", "NSX", and "AVI" are trademarks of Broadcom. Source code is publicly auditable at [github.com/zw008/VMware-AVI](https://github.com/zw008/VMware-AVI) under the MIT license.
 
-AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operations — 29 MCP tools.
+AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operations — 30 MCP tools.
 
 > **Dual mode**: Traditional AVI Controller management + AKO K8s operations in one skill.
 > **Family**: [vmware-aiops](https://github.com/zw008/VMware-AIops) (VM lifecycle), [vmware-monitor](https://github.com/zw008/VMware-Monitor) (inventory/health), [vmware-storage](https://github.com/zw008/VMware-Storage) (iSCSI/vSAN), [vmware-vks](https://github.com/zw008/VMware-VKS) (Tanzu Kubernetes), [vmware-nsx](https://github.com/zw008/VMware-NSX) (NSX networking), [vmware-nsx-security](https://github.com/zw008/VMware-NSX-Security) (DFW/firewall), [vmware-aria](https://github.com/zw008/VMware-Aria) (metrics/alerts/capacity), [vmware-harden](https://github.com/zw008/VMware-Harden) (compliance baselines).
@@ -38,7 +38,7 @@ AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operati
 | Category | Tools | Count |
 |----------|-------|:-----:|
 | **Virtual Service** | list, status, enable/disable | 3 |
-| **Pool Member** | list, enable/disable member (drain/restore traffic) | 3 |
+| **Pool Member** | pool discovery, member list, enable/disable member (drain/restore traffic) | 4 |
 | **SSL Certificate** | list, expiry check | 2 |
 | **Analytics** | VS metrics overview, request error logs | 2 |
 | **Service Engine** | list, health check | 2 |
@@ -61,7 +61,7 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 - Add, remove, drain, or restore pool members (maintenance windows, rolling deployments)
 - Check SSL certificate expiry across all virtual services
 - View VS analytics — throughput, latency, error rates, request logs
-- Check service engine health and resource usage
+- Check service engine status (inventory-based) and per-SE VS placement counts
 - Troubleshoot AKO pods — status, logs, restarts
 - Manage AKO Helm configuration — view, diff, upgrade values.yaml
 - Validate Ingress annotations and diagnose why a VS wasn't created as expected
@@ -137,13 +137,13 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 | Automated pipelines | **MCP** | Type-safe parameters, structured output |
 | AKO troubleshooting | **CLI** | Interactive log tailing, Helm diff output |
 
-## MCP Tools (29 — 15 read, 14 write)
+## MCP Tools (30 — 24 read, 6 write)
 
 | Category | Tools | R/W |
 |----------|-------|:---:|
 | Virtual Service (3) | `vs_list`, `vs_status` | Read |
 | | `vs_toggle` | Write |
-| Pool Member (3) | `pool_members` | Read |
+| Pool Member (4) | `pool_list`, `pool_members` | Read |
 | | `pool_member_enable`, `pool_member_disable` | Write |
 | SSL Certificate (2) | `ssl_list`, `ssl_expiry_check` | Read |
 | Analytics (2) | `vs_analytics`, `vs_error_logs` | Read |
@@ -157,7 +157,7 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 | | `ako_sync_force` | Write |
 | Multi-cluster (3) | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` | Read |
 
-**Read/write split**: 15 tools are read-only, 14 modify state. Write tools require double confirmation and are audit-logged.
+**Read/write split**: 24 tools are read-only, 6 modify state. Write tools require double confirmation and are audit-logged.
 
 ## CLI Quick Reference
 
@@ -214,7 +214,7 @@ vmware-avi ako amko status
 ### AKO Pod in CrashLoopBackOff
 1. Check logs → `vmware-avi ako logs --tail 50`
 2. Common causes: wrong controller IP in values.yaml, network policy blocking AKO→Controller, expired credentials
-3. Fix config → `vmware-avi ako config show` to inspect, then Helm upgrade with corrected values
+3. Fix config → `vmware-avi ako config show` to inspect, then `vmware-avi ako config upgrade` with corrected values (release auto-discovered — official installs use `--generate-name`; pulls the official Broadcom OCI chart `oci://projects.packages.broadcom.com/ako/helm-charts/ako`)
 
 ### Ingress created but no VS on Controller
 1. Validate annotations → `vmware-avi ako ingress check <namespace>`

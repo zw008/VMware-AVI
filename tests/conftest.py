@@ -74,14 +74,37 @@ def _patch_avi_connect(
     mock_avi_session: MagicMock,
     sample_config: AppConfig,
 ) -> Any:
-    """Patch load_config + AviConnectionManager.connect to return the mock session."""
-    with (
-        patch("vmware_avi.config.load_config", return_value=sample_config),
-        patch(
-            "vmware_avi.connection.AviConnectionManager.connect",
-            return_value=mock_avi_session,
-        ),
-    ):
+    """Patch load_config + AviConnectionManager.connect to return the mock session.
+
+    Ops modules bind ``load_config`` at import time via
+    ``from vmware_avi.config import load_config``, so patching only
+    ``vmware_avi.config.load_config`` is order-dependent: if an ops module
+    was already imported (e.g. by the eval suite's import-walk test), its
+    binding still points at the real function. Patch the binding in every
+    already-imported ops module too.
+    """
+    import sys
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch("vmware_avi.config.load_config", return_value=sample_config)
+        )
+        stack.enter_context(
+            patch(
+                "vmware_avi.connection.AviConnectionManager.connect",
+                return_value=mock_avi_session,
+            )
+        )
+        for mod_name, mod in list(sys.modules.items()):
+            if (
+                mod_name.startswith("vmware_avi.ops.")
+                and mod is not None
+                and hasattr(mod, "load_config")
+            ):
+                stack.enter_context(
+                    patch(f"{mod_name}.load_config", return_value=sample_config)
+                )
         yield
 
 

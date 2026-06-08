@@ -31,7 +31,9 @@ class TestCheckSyncStatus:
             patch("vmware_avi.ops.ako_sync.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_sync.K8sConnectionManager") as MockK8s,
             patch("vmware_avi.ops.ako_sync.AviConnectionManager") as MockAvi,
-            patch("vmware_avi.ops.ako_sync.NetworkingV1Api", return_value=mock_net),
+            # ako_sync imports NetworkingV1Api lazily inside the function, so
+            # patch it at the source module, not on ako_sync itself.
+            patch("kubernetes.client.NetworkingV1Api", return_value=mock_net),
         ):
             MockK8s.return_value.get_client.return_value = MagicMock()
             MockAvi.return_value.connect.return_value = mock_session
@@ -55,7 +57,9 @@ class TestCheckSyncStatus:
             patch("vmware_avi.ops.ako_sync.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_sync.K8sConnectionManager") as MockK8s,
             patch("vmware_avi.ops.ako_sync.AviConnectionManager") as MockAvi,
-            patch("vmware_avi.ops.ako_sync.NetworkingV1Api", return_value=mock_net),
+            # ako_sync imports NetworkingV1Api lazily inside the function, so
+            # patch it at the source module, not on ako_sync itself.
+            patch("kubernetes.client.NetworkingV1Api", return_value=mock_net),
         ):
             MockK8s.return_value.get_client.return_value = MagicMock()
             MockAvi.return_value.connect.return_value = mock_session
@@ -81,7 +85,9 @@ class TestShowSyncDiff:
             patch("vmware_avi.ops.ako_sync.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_sync.K8sConnectionManager") as MockK8s,
             patch("vmware_avi.ops.ako_sync.AviConnectionManager") as MockAvi,
-            patch("vmware_avi.ops.ako_sync.NetworkingV1Api", return_value=mock_net),
+            # ako_sync imports NetworkingV1Api lazily inside the function, so
+            # patch it at the source module, not on ako_sync itself.
+            patch("kubernetes.client.NetworkingV1Api", return_value=mock_net),
         ):
             MockK8s.return_value.get_client.return_value = MagicMock()
             MockAvi.return_value.connect.return_value = mock_session

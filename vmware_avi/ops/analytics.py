@@ -61,7 +61,7 @@ def show_analytics(vs_name: str) -> None:
         "l4_client.avg_bandwidth",
         "l4_client.avg_complete_conns",
         "l4_client.avg_new_established_conns",
-        "l7_client.avg_resp_latency",
+        "l7_client.avg_client_txn_latency",
         "l7_client.pct_response_errors",
         "l7_client.sum_total_responses",
     ])
@@ -152,7 +152,7 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
     resp = session.get("analytics/logs", params={
         "type": "1",
         "virtualservice": uuid,
-        "filter": "ne(response_code,200)",
+        "filter": "ge(response_code,400)",
         "page_size": "50",
         "duration": str(duration_seconds),
     })

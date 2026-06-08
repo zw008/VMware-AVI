@@ -10,13 +10,6 @@ from vmware_avi.k8s_connection import K8sConnectionManager
 
 console = Console()
 
-KNOWN_AKO_ANNOTATIONS = {
-    "ako.vmware.com/enable-tls",
-    "ako.vmware.com/pool-name-prefix",
-    "ako.vmware.com/vs-name-prefix",
-    "kubernetes.io/ingress.class",
-}
-
 
 def check_ingress_annotations(namespace: str, context: str | None = None) -> None:
     """Validate Ingress annotations in a namespace."""

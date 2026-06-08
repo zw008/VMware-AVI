@@ -7,7 +7,7 @@
 
 [English](README.md) | 中文
 
-AVI（NSX 高级负载均衡器）管理与 AKO Kubernetes 运维工具 — 10 大类 29 个工具。
+AVI（NSX 高级负载均衡器）管理与 AKO Kubernetes 运维工具 — 10 大类 30 个工具。
 
 > **双模式**：传统 AVI Controller 管理 + AKO K8s 运维合二为一。
 >
@@ -55,7 +55,7 @@ vmware-avi doctor
 | 类别 | 工具 | 数量 |
 |------|------|:----:|
 | **虚拟服务** | 列表、状态、启用/禁用 | 3 |
-| **池成员** | 列表、启用/禁用成员（流量排干/恢复） | 3 |
+| **池成员** | 池发现、成员列表、启用/禁用成员（流量排干/恢复） | 4 |
 | **SSL 证书** | 列表、过期检查 | 2 |
 | **分析** | VS 指标概览、请求错误日志 | 2 |
 | **服务引擎** | 列表、健康检查 | 2 |
@@ -199,7 +199,11 @@ vmware-avi logs my-webapp-vs --since 1h
 ### 服务引擎健康
 
 ```bash
+# 名称、管理 IP、运行状态、SE 组 — 状态来自 serviceengine-inventory
+# 端点（config + runtime 合并数据）
 vmware-avi se list
+
+# 每个 SE 的运行状态 + 关联 VS 数量
 vmware-avi se health
 ```
 
@@ -221,11 +225,15 @@ vmware-avi ako version
 
 ### AKO Helm 配置管理
 
+AKO 的 Helm release 会自动发现（官方安装方式使用 `helm install --generate-name`，
+release 名称并不固定为 `ako`）。升级时从 Broadcom 官方 OCI chart
+`oci://projects.packages.broadcom.com/ako/helm-charts/ako` 拉取，并附带 `--reuse-values`。
+
 ```bash
-# 查看当前 AKO Helm 值
+# 查看当前 AKO Helm 值（release 自动发现）
 vmware-avi ako config show
 
-# 显示待生效变更（diff）
+# 显示待生效变更（与官方 OCI chart 对比 diff）
 vmware-avi ako config diff
 
 # Helm 升级（双重确认 + 默认 --dry-run）
@@ -275,7 +283,7 @@ vmware-avi ako amko status
 
 ## MCP Server
 
-MCP server 通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露全部 29 个工具，适配任何 MCP 兼容客户端。
+MCP server 通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露全部 30 个工具，适配任何 MCP 兼容客户端。
 
 **v1.5.15+ 推荐方式**：完成 `uv tool install vmware-avi` 后，**一条命令启动 MCP**：
 
@@ -321,12 +329,12 @@ vmware-avi-mcp
 
 </details>
 
-### MCP 工具列表（29 个）
+### MCP 工具列表（30 个）
 
 | 类别 | 工具 |
 |------|------|
 | 虚拟服务（3） | `vs_list`, `vs_status`, `vs_toggle` |
-| 池成员（3） | `pool_members`, `pool_member_enable`, `pool_member_disable` |
+| 池成员（4） | `pool_list`, `pool_members`, `pool_member_enable`, `pool_member_disable` |
 | SSL 证书（2） | `ssl_list`, `ssl_expiry_check` |
 | 分析（2） | `vs_analytics`, `vs_error_logs` |
 | 服务引擎（2） | `se_list`, `se_health` |
@@ -421,7 +429,7 @@ vmware-avi-mcp
 
 1. 查看日志：`vmware-avi ako logs --tail 50`
 2. 常见原因：values.yaml 中控制器 IP 错误、网络策略阻止 AKO 访问 Controller、凭据过期
-3. 修复配置：`vmware-avi ako config show` 检查当前配置，然后 Helm upgrade 更新
+3. 修复配置：`vmware-avi ako config show` 检查当前配置，然后用 `vmware-avi ako config upgrade` 更新（release 自动发现；从 Broadcom 官方 OCI chart 拉取）
 
 ### 创建了 Ingress 但 Controller 上没有 VS
 
@@ -470,7 +478,7 @@ vmware-avi-mcp
 
 | 技能 | 范围 | 工具数 | 安装 |
 |------|------|:------:|------|
-| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI 负载均衡、AKO K8s 运维 | 29 | `uv tool install vmware-avi` |
+| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI 负载均衡、AKO K8s 运维 | 30 | `uv tool install vmware-avi` |
 | **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM 生命周期、部署、Guest Ops、集群 | 34 | `uv tool install vmware-aiops` |
 | **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | 只读监控、告警、事件 | 7 | `uv tool install vmware-monitor` |
 | **[vmware-storage](https://github.com/zw008/VMware-Storage)** | 数据存储、iSCSI、vSAN | 11 | `uv tool install vmware-storage` |

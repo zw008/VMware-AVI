@@ -87,7 +87,7 @@ def view_ako_logs(tail: int = 100, since: str = "", context: str | None = None) 
 
 
 def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> None:
-    """Restart AKO pod by deleting it (deployment recreates it).
+    """Restart AKO pod by deleting it (its StatefulSet recreates it).
 
     Args:
         context: K8s context name (optional, uses current context).
@@ -109,7 +109,7 @@ def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> Non
 
     pod_name = _get_ako_pod_name(v1, ns)
     v1.delete_namespaced_pod(pod_name, ns)
-    console.print(f"[green]AKO pod '{pod_name}' deleted. Deployment will recreate it.[/green]")
+    console.print(f"[green]AKO pod '{pod_name}' deleted. StatefulSet will recreate it.[/green]")
 
 
 def show_ako_version(context: str | None = None) -> None:

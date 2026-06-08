@@ -216,8 +216,8 @@ def vs_analytics(vs_name: str) -> str:
 
     Queries the AVI analytics collection API with a fixed window: 12 samples at
     5-minute granularity. Returns L4 metrics (avg bandwidth, completed and new
-    connections) and L7 metrics (avg response latency, % response errors, total
-    responses). Empty output means the VS had no traffic in the window or analytics
+    connections) and L7 metrics (avg client transaction latency, % response errors,
+    total responses). Empty output means the VS had no traffic in the window or analytics
     collection is disabled — not an error. Use when investigating throughput or
     latency issues after vs_status shows degraded health; use vs_error_logs for
     per-request error detail with a configurable time window.
@@ -251,10 +251,11 @@ def se_list() -> str:
     """[READ] List all Service Engines (AVI data-plane VMs) on the Controller.
 
     Returns one row per SE: Name, management IP, operational status (e.g. OPER_UP),
-    and SE Group. The full list is returned in one call — no pagination or
+    and SE Group, sourced from the serviceengine-inventory endpoint (config +
+    runtime merged). The full list is returned in one call — no pagination or
     filtering. No parameters required; connects to the default controller from
     config. Use to inventory data-plane capacity or find an SE's name and IP; use
-    se_health instead for CPU/memory/disk usage and connected-VS counts when
+    se_health instead for per-SE operational status and connected-VS counts when
     investigating degraded Virtual Service health.
     """
     from vmware_avi.ops.se_mgmt import list_service_engines
@@ -264,9 +265,11 @@ def se_list() -> str:
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
 def se_health() -> str:
-    """[READ] Check health of all Service Engines — CPU, memory, disk usage, and connectivity.
+    """[READ] Check health of all Service Engines — operational status and connected-VS counts.
 
-    Use when VS health degrades to check if the issue is at the SE level.
+    VS placement is reconstructed from the virtualservice-inventory placement map
+    (vip_summary[].service_engine[]). Use when VS health degrades to check if the
+    issue is at the SE level.
     """
     from vmware_avi.ops.se_mgmt import check_se_health
     return _capture_output(check_se_health)
@@ -308,7 +311,7 @@ def ako_logs(tail: int = 100, since: Optional[str] = None) -> str:
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
 @vmware_tool(risk_level="high")
 def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
-    """[WRITE] Restart AKO pod by deleting it (K8s recreates automatically).
+    """[WRITE] Restart AKO pod by deleting it (its StatefulSet recreates it automatically).
 
     Use when AKO is stuck or after config changes. Brief traffic disruption possible during restart.
 
@@ -323,7 +326,7 @@ def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
     if not confirmed:
         ctx_hint = f" in context '{context}'" if context else ""
         return (
-            f"[preview] Would delete the AKO pod{ctx_hint} — K8s will recreate it automatically. "
+            f"[preview] Would delete the AKO pod{ctx_hint} — its StatefulSet will recreate it automatically. "
             "Brief traffic disruption is possible during restart. "
             "Re-invoke with confirmed=True to execute."
         )
@@ -369,7 +372,10 @@ def ako_config_diff() -> str:
 def ako_config_upgrade(dry_run: bool = True) -> str:
     """[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety.
 
-    Set dry_run=false to apply. Requires double confirmation for non-dry-run.
+    Discovers the AKO Helm release in avi-system automatically (official installs
+    use --generate-name) and upgrades from the official Broadcom OCI chart with
+    --reuse-values. Set dry_run=false to apply. Requires double confirmation for
+    non-dry-run. Fails with a teaching error if no AKO release is installed.
 
     Args:
         dry_run: Preview changes without applying (default true).

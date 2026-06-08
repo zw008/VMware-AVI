@@ -50,10 +50,17 @@ class AviConnectionManager:
 
     def disconnect(self, controller_name: str) -> None:
         if controller_name in self._sessions:
+            session = self._sessions[controller_name]
             try:
-                self._sessions[controller_name].delete("logout")
-            except Exception:
-                pass
+                # Controller logout is POST /logout (same as avisdk's own
+                # session cleanup) — DELETE /logout is not a valid endpoint.
+                session.post("logout")
+            except Exception as e:
+                _log.debug(
+                    "Logout POST failed for controller '%s': %s — dropping "
+                    "session locally anyway", controller_name, e,
+                )
+            session.delete_session()
             del self._sessions[controller_name]
 
     def disconnect_all(self) -> None:

@@ -1,22 +1,27 @@
 """Tests for MCP server tool registration.
 
-Validates that exactly 29 tools are registered, with no duplicates
+Validates that exactly 30 tools are registered, with no duplicates
 and every required tool present.
 """
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
-from mcp_server.server import TOOLS
+from mcp_server.server import mcp
 
-EXPECTED_TOOL_COUNT = 29
+TOOLS = asyncio.run(mcp.list_tools())
+
+EXPECTED_TOOL_COUNT = 30
 
 EXPECTED_TOOL_NAMES = {
     # Traditional mode
     "vs_list",
     "vs_status",
     "vs_toggle",
+    "pool_list",
     "pool_members",
     "pool_member_enable",
     "pool_member_disable",
@@ -49,7 +54,7 @@ EXPECTED_TOOL_NAMES = {
 
 @pytest.mark.unit
 class TestMcpToolRegistration:
-    """Ensure the MCP server exposes the correct set of 29 tools."""
+    """Ensure the MCP server exposes the correct set of 30 tools."""
 
     def test_tool_count(self) -> None:
         assert len(TOOLS) == EXPECTED_TOOL_COUNT, (

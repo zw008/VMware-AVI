@@ -115,7 +115,7 @@ def show_vs_status(name: str) -> None:
     conn_rate = metrics.get("l4_client.avg_new_established_conns")
     if conn_rate is not None:
         console.print(f"  New conn/s: {conn_rate}")
-    resp_latency = metrics.get("l7_client.avg_resp_latency")
+    resp_latency = metrics.get("l7_client.avg_client_txn_latency")
     if resp_latency is not None:
         console.print(f"  Latency:   {resp_latency} ms")
 

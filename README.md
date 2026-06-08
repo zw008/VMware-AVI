@@ -7,7 +7,7 @@
 
 English | [中文](README-CN.md)
 
-AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool — 29 tools across 10 categories.
+AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool — 30 tools across 10 categories.
 
 > **Dual mode**: Traditional AVI Controller management + AKO K8s operations in one skill.
 >
@@ -55,7 +55,7 @@ vmware-avi doctor
 | Category | Tools | Count |
 |----------|-------|:-----:|
 | **Virtual Service** | list, status, enable/disable | 3 |
-| **Pool Member** | list, enable/disable member (drain/restore traffic) | 3 |
+| **Pool Member** | pool discovery, member list, enable/disable member (drain/restore traffic) | 4 |
 | **SSL Certificate** | list, expiry check | 2 |
 | **Analytics** | VS metrics overview, request error logs | 2 |
 | **Service Engine** | list, health check | 2 |
@@ -199,7 +199,11 @@ vmware-avi logs my-webapp-vs --since 1h
 ### Service Engine Health
 
 ```bash
+# Name, mgmt IP, operational status, SE group — status sourced from the
+# serviceengine-inventory endpoint (config + runtime merged)
 vmware-avi se list
+
+# Per-SE operational status + connected-VS counts
 vmware-avi se health
 ```
 
@@ -221,11 +225,16 @@ vmware-avi ako version
 
 ### AKO Helm Config Management
 
+The AKO Helm release is discovered automatically (official installs use
+`helm install --generate-name`, so the release is not named `ako`). Upgrades pull
+the official Broadcom OCI chart
+`oci://projects.packages.broadcom.com/ako/helm-charts/ako` with `--reuse-values`.
+
 ```bash
-# View current AKO Helm values
+# View current AKO Helm values (release auto-discovered)
 vmware-avi ako config show
 
-# Show pending changes (diff)
+# Show pending changes (diff against the official OCI chart)
 vmware-avi ako config diff
 
 # Helm upgrade (double confirmation + --dry-run default)
@@ -275,7 +284,7 @@ vmware-avi ako amko status
 
 ## MCP Server
 
-The MCP server exposes all 29 tools via the [Model Context Protocol](https://modelcontextprotocol.io). Works with any MCP-compatible client.
+The MCP server exposes all 30 tools via the [Model Context Protocol](https://modelcontextprotocol.io). Works with any MCP-compatible client.
 
 **After `uv tool install vmware-avi`, start the MCP server with one command** (v1.5.15+):
 
@@ -321,12 +330,12 @@ vmware-avi-mcp
 
 </details>
 
-### MCP Tools (29)
+### MCP Tools (30)
 
 | Category | Tools |
 |----------|-------|
 | Virtual Service (3) | `vs_list`, `vs_status`, `vs_toggle` |
-| Pool Member (3) | `pool_members`, `pool_member_enable`, `pool_member_disable` |
+| Pool Member (4) | `pool_list`, `pool_members`, `pool_member_enable`, `pool_member_disable` |
 | SSL Certificate (2) | `ssl_list`, `ssl_expiry_check` |
 | Analytics (2) | `vs_analytics`, `vs_error_logs` |
 | Service Engine (2) | `se_list`, `se_health` |
@@ -421,7 +430,7 @@ Expired certificates cause outages. Run periodic checks:
 
 1. Check logs: `vmware-avi ako logs --tail 50`
 2. Common causes: wrong controller IP in values.yaml, network policy blocking AKO to Controller, expired credentials
-3. Fix config: `vmware-avi ako config show` to inspect, then Helm upgrade with corrected values
+3. Fix config: `vmware-avi ako config show` to inspect, then `vmware-avi ako config upgrade` with corrected values (release auto-discovered; pulls the official Broadcom OCI chart)
 
 ### Ingress created but no VS on Controller
 
@@ -470,7 +479,7 @@ Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists
 
 | Skill | Scope | Tools | Install |
 |-------|-------|:-----:|---------|
-| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI load balancer, AKO K8s operations | 29 | `uv tool install vmware-avi` |
+| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI load balancer, AKO K8s operations | 30 | `uv tool install vmware-avi` |
 | **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM lifecycle, deployment, guest ops, cluster | 34 | `uv tool install vmware-aiops` |
 | **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | Read-only monitoring, alarms, events | 7 | `uv tool install vmware-monitor` |
 | **[vmware-storage](https://github.com/zw008/VMware-Storage)** | Datastores, iSCSI, vSAN | 11 | `uv tool install vmware-storage` |

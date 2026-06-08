@@ -1,6 +1,6 @@
 # VMware AVI Capabilities
 
-All 29 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
+All 30 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
 
 ## Version Compatibility
 
@@ -8,7 +8,7 @@ All 29 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmw
 
 | Controller Version | Support Level | Notes |
 |--------------------|--------------|-------|
-| AVI 30.x | ✅ Full | All 29 tools verified. avisdk `<31.0` upper bound. |
+| AVI 30.x | ✅ Full | All 30 tools verified. avisdk `<31.0` upper bound. |
 | AVI 22.1.x | ✅ Full | All analytics endpoint quirks fixed in v1.5.11 — `vs_analytics` uses POST `/analytics/metrics/collection` with `metric_requests[]`; `pool_list` uses `/virtualservice-inventory` to expose K8S-managed pool groups; SE→VS mapping reconstructed from `vip_summary[].service_engine[]`. |
 | AVI < 22.1 | ⚠ Untested | avisdk may load but analytics/inventory endpoints differ. Not in CI. |
 
@@ -56,7 +56,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 - L3 tools always pass through the `@vmware_tool` decorator: connection check → policy check → audit log → double-confirm.
 - AKO Kubernetes operations affect ingress/service routing — even "low-risk" restarts can briefly interrupt traffic; treat as L3 with explicit user approval.
 
-## Traditional Mode — AVI Controller (12 tools)
+## Traditional Mode — AVI Controller (13 tools)
 
 ### Virtual Service (3)
 
@@ -66,10 +66,11 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | `vs_status` | Show detailed status of a single VS (VIP, health score, pool binding, enabled state) | `name` (string, **required**) | Low | No |
 | `vs_toggle` | Enable or disable a Virtual Service | `name` (string, **required**), `enable` (boolean, **required**) | Medium | Yes (disable) |
 
-### Pool Member (3)
+### Pool Member (4)
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
+| `pool_list` | Discover pools on the Controller, with VS bindings (uses `/virtualservice-inventory` to include K8S-managed pool groups) | `vs_filter` (string, optional) | Low | No |
 | `pool_members` | List all members of a pool with health status and ratio | `pool` (string, **required**) | Low | No |
 | `pool_member_enable` | Enable a pool member (restore traffic after maintenance) | `pool` (string, **required**), `server` (string, **required**) | Low | No |
 | `pool_member_disable` | Disable a pool member with graceful connection drain | `pool` (string, **required**), `server` (string, **required**) | Medium | Yes |
@@ -85,15 +86,15 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
-| `vs_analytics` | Show VS metrics: throughput, latency, connections, error rates | `vs_name` (string, **required**) | Low | No |
-| `vs_error_logs` | Show recent request error logs for a VS | `vs_name` (string, **required**), `since` (string, default: `"1h"`) | Low | No |
+| `vs_analytics` | Show VS metrics: L4 bandwidth/connections (`l4_client.avg_bandwidth`, `avg_complete_conns`, `avg_new_established_conns`) + L7 client transaction latency (`l7_client.avg_client_txn_latency`), response errors, total responses | `vs_name` (string, **required**) | Low | No |
+| `vs_error_logs` | Show recent request error logs for a VS (HTTP status ≥ 400, filter `ge(response_code,400)`) | `vs_name` (string, **required**), `since` (string, default: `"1h"`) | Low | No |
 
 ### Service Engine (2)
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
-| `se_list` | List all Service Engines with status and resource info | *(none)* | Low | No |
-| `se_health` | Check SE health: CPU, memory, disk, HA status | *(none)* | Low | No |
+| `se_list` | List all Service Engines: name, mgmt IP, operational status, SE group (via `serviceengine-inventory`, config + runtime merged) | *(none)* | Low | No |
+| `se_health` | Check SE health: per-SE operational status + connected-VS counts (placement map from `virtualservice-inventory`) | *(none)* | Low | No |
 
 ## AKO Mode — Kubernetes (17 tools)
 
@@ -103,16 +104,16 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 |------|-------------|------------|:----:|:-------:|
 | `ako_status` | Check AKO pod status (phase, restart count, readiness) | `context` (string, optional) | Low | No |
 | `ako_logs` | View AKO pod logs (tail mode) | `tail` (integer, default: 100), `since` (string, optional) | Low | No |
-| `ako_restart` | Restart AKO pod via rolling restart of the deployment | `context` (string, optional) | High | Yes |
+| `ako_restart` | Restart AKO pod by deleting it (its StatefulSet recreates it) | `context` (string, optional) | High | Yes |
 | `ako_version` | Show AKO container image tag and Helm chart version | `context` (string, optional) | Low | No |
 
 ### AKO Config (3)
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
-| `ako_config_show` | Show current AKO Helm values (values.yaml snapshot) | *(none)* | Low | No |
-| `ako_config_diff` | Show diff between running values and local chart values | *(none)* | Low | No |
-| `ako_config_upgrade` | Helm upgrade AKO with updated values (defaults to dry-run) | `dry_run` (boolean, default: `true`) | High | Yes |
+| `ako_config_show` | Show current AKO Helm values (values.yaml snapshot; release auto-discovered via `helm list` — official installs use `--generate-name`) | *(none)* | Low | No |
+| `ako_config_diff` | Show diff between running values and the official Broadcom OCI chart (`oci://projects.packages.broadcom.com/ako/helm-charts/ako`) | *(none)* | Low | No |
+| `ako_config_upgrade` | Helm upgrade the discovered AKO release from the official Broadcom OCI chart with `--reuse-values` (defaults to dry-run) | `dry_run` (boolean, default: `true`) | High | Yes |
 
 ### Ingress Diagnostics (4)
 
@@ -151,7 +152,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 | Risk | Count | Tools |
 |------|:-----:|-------|
-| Low | 22 | All read-only tools + `vs_toggle` (enable), `pool_member_enable` |
+| Low | 23 | All read-only tools + `vs_toggle` (enable), `pool_member_enable` |
 | Medium | 4 | `vs_toggle` (disable), `pool_member_disable`, `ako_sync_force`, `pool_member_enable` contextually |
 | High | 3 | `ako_restart`, `ako_config_upgrade` (when `dry_run=false`), `vs_toggle` (disable on critical VS) |
 
@@ -159,7 +160,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 ## Audit Coverage
 
-All 29 tools are wrapped with `@vmware_tool` from vmware-policy, which provides:
+All 30 tools are wrapped with `@vmware_tool` from vmware-policy, which provides:
 
 - **Pre-execution**: Policy rule check against `~/.vmware/rules.yaml` (deny rules, maintenance windows)
 - **Post-execution**: Audit log entry written to `~/.vmware/audit.db` (SQLite WAL mode)

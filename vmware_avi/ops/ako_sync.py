@@ -106,5 +106,5 @@ def force_resync(context: str | None = None, *, skip_prompt: bool = False) -> No
     v1.delete_namespaced_pod(pod_name, ns)
     console.print(
         f"[green]AKO pod '{pod_name}' deleted to trigger full resync. "
-        "Deployment will recreate it.[/green]"
+        "StatefulSet will recreate it.[/green]"
     )

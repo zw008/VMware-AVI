@@ -56,16 +56,23 @@ def list_clusters() -> None:
 
 def show_amko_status() -> None:
     """Show AMKO (multi-cluster GSLB) status."""
-    result = subprocess.run(
-        [
-            "kubectl", "get", "pods", "-n", "avi-system",
-            "-l", "app=amko",
-            "-o", "wide",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+    # Official AMKO chart labels pods `app.kubernetes.io/name=amko`; fall
+    # back to the legacy bare `app=amko` selector (same dual-selector
+    # pattern as ako_pod._get_ako_pod_name).
+    result = None
+    for selector in ("app.kubernetes.io/name=amko", "app=amko"):
+        result = subprocess.run(
+            [
+                "kubectl", "get", "pods", "-n", "avi-system",
+                "-l", selector,
+                "-o", "wide",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            break
 
     console.print("\n[bold]AMKO Status[/bold]\n")
     if result.returncode != 0 or not result.stdout.strip():
