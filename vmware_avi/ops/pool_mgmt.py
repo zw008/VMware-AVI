@@ -5,6 +5,7 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
 from vmware_avi.connection import AviConnectionManager
 
@@ -66,7 +67,7 @@ def list_pools(vs_filter: str | None = None) -> None:
 
     shown = 0
     for pool in pools:
-        name = pool.get("name", "")
+        name = sanitize(pool.get("name", ""))
         uuid = pool.get("uuid", "")
         # referenced filter uses either name or uuid to match
         if referenced is not None and name not in referenced and uuid not in referenced:

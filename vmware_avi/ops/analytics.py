@@ -7,6 +7,7 @@ import re
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
 from vmware_avi.connection import AviConnectionManager
 
@@ -92,7 +93,7 @@ def show_analytics(vs_name: str) -> None:
     else:
         series_list = list(raw_series)
 
-    console.print(f"\n[bold]Analytics: {vs_name}[/bold]")
+    console.print(f"\n[bold]Analytics: {sanitize(vs_name)}[/bold]")
     if not series_list:
         console.print("  [yellow]No metric data returned — the VS may have no traffic "
                       "in the queried window, or analytics collection is disabled.[/yellow]")

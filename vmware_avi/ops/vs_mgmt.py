@@ -5,16 +5,11 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize as _sanitize
 from vmware_avi.config import load_config
 from vmware_avi.connection import AviConnectionManager
 
 console = Console()
-
-
-def _sanitize(text: str, max_len: int = 500) -> str:
-    """Truncate and strip control characters from API text."""
-    cleaned = "".join(c for c in text[:max_len] if c.isprintable() or c in "\n\t")
-    return cleaned
 
 
 def list_virtual_services(controller_name: str | None = None) -> None:

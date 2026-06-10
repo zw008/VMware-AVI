@@ -5,6 +5,7 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
 from vmware_avi.connection import AviConnectionManager
 
@@ -35,7 +36,7 @@ def list_service_engines() -> None:
     for se in ses:
         cfg_data = se.get("config", {}) or {}
         runtime = se.get("runtime", {}) or {}
-        name = cfg_data.get("name", "")
+        name = sanitize(cfg_data.get("name", ""))
         vnics = (cfg_data.get("mgmt_vnic") or {}).get("vnic_networks") or [{}]
         mgmt_ip = vnics[0].get("ip", {}).get("ip_addr", {}).get("addr", "N/A")
         oper = (runtime.get("oper_status", {}) or {}).get("state", "N/A")

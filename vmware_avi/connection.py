@@ -124,4 +124,7 @@ class AviConnectionManager:
             api_version=ctrl.api_version,
             tenant=ctrl.tenant,
             port=ctrl.port,
+            # avisdk defaults verify=False; honour the configured flag so TLS
+            # verification (the documented default) is actually enforced.
+            verify=ctrl.verify_ssl,
         )

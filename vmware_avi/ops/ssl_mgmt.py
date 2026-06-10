@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
 from vmware_avi.connection import AviConnectionManager
 
@@ -29,9 +30,9 @@ def list_certificates() -> None:
     table.add_column("Type")
 
     for cert in certs:
-        name = cert.get("name", "")
+        name = sanitize(cert.get("name", ""))
         cert_info = cert.get("certificate", {})
-        subject = cert_info.get("subject", {}).get("common_name", "N/A")
+        subject = sanitize(cert_info.get("subject", {}).get("common_name", "N/A"))
         not_after = cert_info.get("not_after", "N/A")
         cert_type = cert.get("type", "N/A")
         table.add_row(name, subject, not_after, cert_type)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
+from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
 from vmware_avi.k8s_connection import K8sConnectionManager
 
@@ -116,7 +117,7 @@ def diagnose_ingress(
     annotations = ing.metadata.annotations or {}
     console.print("[bold]Annotations:[/bold]")
     for k, v in annotations.items():
-        console.print(f"  {k}: {v}")
+        console.print(f"  {sanitize(k)}: {sanitize(v)}")
 
     issues: list[str] = []
     suggestions: list[str] = []

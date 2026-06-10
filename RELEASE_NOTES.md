@@ -1,3 +1,14 @@
+## v1.5.35 (2026-06-10) — security fix: TLS verification now actually enforced
+
+### Fixed
+- **`verify_ssl` is now passed to avisdk** (`ApiSession.get_session(verify=…)`). Previously
+  the flag was dropped and avisdk silently defaulted to no verification — the documented
+  "TLS on by default" behaviour was non-functional. TLS verification now works as documented.
+- **Output sanitization** centralized in `_safety.sanitize` and applied consistently to
+  pool / Service Engine / SSL-cert / AKO-ingress / VS names from the API.
+
+This release aligns the whole family back to a single version (1.5.35); vmware-policy and vmware-pilot return to the shared number after sitting at 1.5.22.
+
 ## v1.5.32 (2026-06-08) — Metric/field corrections + AKO helm/AMKO discovery fixes
 
 ### Fixed
