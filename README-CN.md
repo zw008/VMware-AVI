@@ -7,7 +7,7 @@
 
 [English](README.md) | 中文
 
-AVI（NSX 高级负载均衡器）管理与 AKO Kubernetes 运维工具 — 10 大类 30 个工具。
+AVI（NSX 高级负载均衡器）管理与 AKO Kubernetes 运维工具 — 10 大类 28 个工具。
 
 > **双模式**：传统 AVI Controller 管理 + AKO K8s 运维合二为一。
 >
@@ -283,7 +283,7 @@ vmware-avi ako amko status
 
 ## MCP Server
 
-MCP server 通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露全部 30 个工具，适配任何 MCP 兼容客户端。
+MCP server 通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露全部 28 个工具，适配任何 MCP 兼容客户端。
 
 **v1.5.15+ 推荐方式**：完成 `uv tool install vmware-avi` 后，**一条命令启动 MCP**：
 
@@ -329,7 +329,7 @@ vmware-avi-mcp
 
 </details>
 
-### MCP 工具列表（30 个）
+### MCP 工具列表（28 个）
 
 | 类别 | 工具 |
 |------|------|
@@ -340,9 +340,9 @@ vmware-avi-mcp
 | 服务引擎（2） | `se_list`, `se_health` |
 | AKO Pod（4） | `ako_status`, `ako_logs`, `ako_restart`, `ako_version` |
 | AKO 配置（3） | `ako_config_show`, `ako_config_diff`, `ako_config_upgrade` |
-| Ingress 诊断（4） | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose`, `ako_ingress_fix_suggest` |
+| Ingress 诊断（3） | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose` |
 | 同步诊断（3） | `ako_sync_status`, `ako_sync_diff`, `ako_sync_force` |
-| 多集群（3） | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` |
+| 多集群（2） | `ako_clusters`, `ako_amko_status` |
 
 ---
 
@@ -478,7 +478,7 @@ vmware-avi-mcp
 
 | 技能 | 范围 | 工具数 | 安装 |
 |------|------|:------:|------|
-| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI 负载均衡、AKO K8s 运维 | 30 | `uv tool install vmware-avi` |
+| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI 负载均衡、AKO K8s 运维 | 28 | `uv tool install vmware-avi` |
 | **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM 生命周期、部署、Guest Ops、集群 | 34 | `uv tool install vmware-aiops` |
 | **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | 只读监控、告警、事件 | 7 | `uv tool install vmware-monitor` |
 | **[vmware-storage](https://github.com/zw008/VMware-Storage)** | 数据存储、iSCSI、vSAN | 11 | `uv tool install vmware-storage` |

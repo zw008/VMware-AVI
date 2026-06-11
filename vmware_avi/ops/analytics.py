@@ -9,7 +9,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager
+from vmware_avi.connection import AviConnectionManager, api_get, api_post
 
 console = Console()
 
@@ -71,7 +71,7 @@ def show_analytics(vs_name: str) -> None:
     # so the body must wrap each query in a metric_requests[] entry —
     # flattening the params at the top level yields HTTP 404
     # {"error": "Empty Request"}.
-    resp = session.post("analytics/metrics/collection", data={
+    resp = api_post(session, "analytics/metrics/collection", data={
         "metric_requests": [{
             "metric_id": metric_ids,
             "entity_uuid": uuid,
@@ -150,7 +150,7 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
     # AVI 22.x requires the VS UUID as an explicit ``virtualservice`` URL
     # parameter on /analytics/logs; passing it only inside ``filter`` as
     # ``co(vs_uuid,<uuid>)`` yields HTTP 400 "VirtualService ID required".
-    resp = session.get("analytics/logs", params={
+    resp = api_get(session, "analytics/logs", params={
         "type": "1",
         "virtualservice": uuid,
         "filter": "ge(response_code,400)",
@@ -161,10 +161,13 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
 
     console.print(f"\n[bold]Error Logs: {vs_name} (last {since} = {duration_seconds}s)[/bold]")
     for log in logs:
-        ts = log.get("report_timestamp", "")
-        code = log.get("response_code", "")
-        uri = log.get("uri_path", "")[:80]
-        client = log.get("client_ip", "")
+        # Log-record fields can be present-but-null in L4/L7 records —
+        # slicing None raises TypeError and printing None is noise, so
+        # coalesce every field before formatting.
+        ts = log.get("report_timestamp") or ""
+        code = log.get("response_code") or ""
+        uri = (log.get("uri_path") or "")[:80]
+        client = log.get("client_ip") or ""
         console.print(f"  [{ts}] {code} {uri} from {client}")
 
     if not logs:

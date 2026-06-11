@@ -91,11 +91,21 @@ def diff_ako_config(namespace: str = "avi-system") -> None:
         console.print(result.stdout)
 
 
-def upgrade_ako(dry_run: bool = True, namespace: str = "avi-system") -> None:
-    """Helm upgrade AKO with confirmation."""
+def upgrade_ako(
+    dry_run: bool = True, namespace: str = "avi-system", *, skip_prompt: bool = False
+) -> None:
+    """Helm upgrade AKO with confirmation.
+
+    Args:
+        dry_run: Preview changes without applying (default True).
+        namespace: K8s namespace hosting the AKO release.
+        skip_prompt: When True, bypass the interactive double-confirm prompt.
+            Used by MCP callers that enforce confirmation via the ``confirmed``
+            parameter before reaching this function.
+    """
     release = _find_ako_release(namespace)
 
-    if not dry_run:
+    if not dry_run and not skip_prompt:
         from vmware_avi._safety import double_confirm
 
         if not double_confirm(f"Helm upgrade AKO release '{release}'"):

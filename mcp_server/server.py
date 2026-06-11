@@ -1,6 +1,6 @@
 """MCP Server for VMware AVI — stdio transport.
 
-Exposes 29 tools for AVI Controller + AKO K8s operations.
+Exposes 28 tools (22 read, 6 write) for AVI Controller + AKO K8s operations.
 Entry point: vmware-avi-mcp (defined in pyproject.toml).
 """
 
@@ -295,7 +295,7 @@ def ako_status(context: Optional[str] = None) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
 @vmware_tool(risk_level="low")
-def ako_logs(tail: int = 100, since: Optional[str] = None) -> str:
+def ako_logs(tail: int = 100, since: Optional[str] = None, context: Optional[str] = None) -> str:
     """[READ] View AKO pod logs to debug Ingress creation failures, sync errors, or AVI Controller connectivity issues.
 
     Use 'since' to narrow the time window.
@@ -303,9 +303,10 @@ def ako_logs(tail: int = 100, since: Optional[str] = None) -> str:
     Args:
         tail: Number of log lines to show (default 100).
         since: Time filter, e.g. '30m', '1h'.
+        context: K8s context name (optional, uses current context).
     """
     from vmware_avi.ops.ako_pod import view_ako_logs
-    return _capture_output(view_ako_logs, tail, since or "", None)
+    return _capture_output(view_ako_logs, tail, since or "", context)
 
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
@@ -369,19 +370,31 @@ def ako_config_diff() -> str:
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True})
 @vmware_tool(risk_level="medium")
-def ako_config_upgrade(dry_run: bool = True) -> str:
+def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
     """[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety.
 
     Discovers the AKO Helm release in avi-system automatically (official installs
     use --generate-name) and upgrades from the official Broadcom OCI chart with
-    --reuse-values. Set dry_run=false to apply. Requires double confirmation for
-    non-dry-run. Fails with a teaching error if no AKO release is installed.
+    --reuse-values. Set dry_run=false to apply. Fails with a teaching error if no
+    AKO release is installed.
+
+    SAFETY: When dry_run=False, requires confirmed=True to execute. Default False
+    returns a preview message describing the intended action. Dry-run is always
+    safe and does not require confirmation.
 
     Args:
         dry_run: Preview changes without applying (default true).
+        confirmed: Must be True when dry_run=False to actually apply the upgrade.
+            Default False returns a preview-only message. Ignored when dry_run=True.
     """
     from vmware_avi.ops.ako_config import upgrade_ako
-    return _capture_output(upgrade_ako, dry_run)
+    if not dry_run and not confirmed:
+        return (
+            "[preview] Would helm-upgrade the AKO release in avi-system from the "
+            "official Broadcom OCI chart with --reuse-values. "
+            "Re-invoke with confirmed=True to execute, or use dry_run=True to preview."
+        )
+    return _capture_output(upgrade_ako, dry_run, skip_prompt=True)
 
 
 @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
@@ -428,20 +441,6 @@ def ako_ingress_diagnose(name: str, namespace: str = "default", context: Optiona
         namespace: K8s namespace containing the Ingress (default 'default').
         context: kubeconfig context name (optional; uses current context).
             Discover context names with ako_clusters.
-    """
-    from vmware_avi.ops.ako_ingress import diagnose_ingress
-    return _capture_output(diagnose_ingress, name, namespace, context)
-
-
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
-@vmware_tool(risk_level="low")
-def ako_ingress_fix_suggest(name: str, namespace: str = "default", context: Optional[str] = None) -> str:
-    """[READ] Suggest specific fixes for Ingress issues — returns actionable kubectl commands or annotation corrections based on the diagnosed problem.
-
-    Args:
-        name: Ingress resource name.
-        namespace: K8s namespace (default 'default').
-        context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_ingress import diagnose_ingress
     return _capture_output(diagnose_ingress, name, namespace, context)
@@ -512,23 +511,6 @@ def ako_clusters() -> str:
     No parameters or filtering — all contexts are checked, so unreachable clusters
     add latency. Requires kubectl on PATH. Start here to discover context names,
     then pass one as `context` to ako_status, ako_logs, or ako_ingress_diagnose.
-    """
-    from vmware_avi.ops.ako_multi_cluster import list_clusters
-    return _capture_output(list_clusters)
-
-
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
-@vmware_tool(risk_level="low")
-def ako_cluster_overview() -> str:
-    """[READ] Fleet-wide AKO health summary across all Kubernetes contexts in the active kubeconfig.
-
-    Returns one row per context (from KUBECONFIG env var or ~/.kube/config): AKO pod
-    phase (Running / Pending / 'Not deployed') and AKO version from the container
-    image tag. No parameters; every context is probed via kubectl, so slow or
-    unreachable clusters add latency. Use for a quick multi-cluster health check
-    answering "is AKO up everywhere, and on which version?". For single-cluster
-    detail, follow up with ako_status or ako_version passing a specific `context`;
-    for GSLB federation health use ako_amko_status.
     """
     from vmware_avi.ops.ako_multi_cluster import list_clusters
     return _capture_output(list_clusters)

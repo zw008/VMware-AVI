@@ -1,6 +1,6 @@
 # VMware AVI Capabilities
 
-All 30 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
+All 28 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmware-avi-mcp`), organized by category.
 
 ## Version Compatibility
 
@@ -8,7 +8,7 @@ All 30 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmw
 
 | Controller Version | Support Level | Notes |
 |--------------------|--------------|-------|
-| AVI 30.x | ✅ Full | All 30 tools verified. avisdk `<31.0` upper bound. |
+| AVI 30.x | ✅ Full | All 28 tools verified. avisdk `<31.0` upper bound. |
 | AVI 22.1.x | ✅ Full | All analytics endpoint quirks fixed in v1.5.11 — `vs_analytics` uses POST `/analytics/metrics/collection` with `metric_requests[]`; `pool_list` uses `/virtualservice-inventory` to expose K8S-managed pool groups; SE→VS mapping reconstructed from `vip_summary[].service_engine[]`. |
 | AVI < 22.1 | ⚠ Untested | avisdk may load but analytics/inventory endpoints differ. Not in CI. |
 
@@ -115,14 +115,13 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | `ako_config_diff` | Show diff between running values and the official Broadcom OCI chart (`oci://projects.packages.broadcom.com/ako/helm-charts/ako`) | *(none)* | Low | No |
 | `ako_config_upgrade` | Helm upgrade the discovered AKO release from the official Broadcom OCI chart with `--reuse-values` (defaults to dry-run) | `dry_run` (boolean, default: `true`) | High | Yes |
 
-### Ingress Diagnostics (4)
+### Ingress Diagnostics (3)
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
 | `ako_ingress_check` | Validate Ingress annotations against AKO expectations in a namespace | `namespace` (string, **required**) | Low | No |
 | `ako_ingress_map` | Show full Ingress-to-VS mapping across all namespaces | *(none)* | Low | No |
 | `ako_ingress_diagnose` | Diagnose why a specific Ingress has no corresponding VS on the Controller | `name` (string, **required**), `namespace` (string, default: `"default"`) | Low | No |
-| `ako_ingress_fix_suggest` | Suggest corrective actions for Ingress issues (annotation fixes, missing secrets) | `name` (string, **required**), `namespace` (string, default: `"default"`) | Low | No |
 
 ### Sync Diagnostics (3)
 
@@ -132,12 +131,11 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | `ako_sync_diff` | Show objects present in K8s but missing on Controller, and vice versa | *(none)* | Low | No |
 | `ako_sync_force` | Force AKO to re-reconcile all K8s objects against the Controller | *(none)* | Medium | Yes |
 
-### Multi-cluster (3)
+### Multi-cluster (2)
 
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
 | `ako_clusters` | List all K8s clusters with AKO deployed | *(none)* | Low | No |
-| `ako_cluster_overview` | Cross-cluster AKO status overview (version, health, sync state per cluster) | *(none)* | Low | No |
 | `ako_amko_status` | Show AMKO (Avi Multi-cluster Kubernetes Operator) GSLB status | *(none)* | Low | No |
 
 ## Risk Level Definitions
@@ -160,7 +158,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 ## Audit Coverage
 
-All 30 tools are wrapped with `@vmware_tool` from vmware-policy, which provides:
+All 28 tools are wrapped with `@vmware_tool` from vmware-policy, which provides:
 
 - **Pre-execution**: Policy rule check against `~/.vmware/rules.yaml` (deny rules, maintenance windows)
 - **Post-execution**: Audit log entry written to `~/.vmware/audit.db` (SQLite WAL mode)

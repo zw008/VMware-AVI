@@ -7,7 +7,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize as _sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager
+from vmware_avi.connection import AviApiError, AviConnectionManager, api_get, api_put
 
 console = Console()
 
@@ -18,7 +18,7 @@ def list_virtual_services(controller_name: str | None = None) -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect(controller_name)
 
-    resp = session.get("virtualservice", params={"fields": "name,enabled,uuid,vip"})
+    resp = api_get(session, "virtualservice", params={"fields": "name,enabled,uuid,vip"})
     results = resp.json().get("results", [])
 
     table = Table(title="Virtual Services")
@@ -55,7 +55,7 @@ def show_vs_status(name: str) -> None:
     # Fall back gracefully if endpoint is unavailable on this Controller.
     inventory: dict = {}
     try:
-        inv_resp = session.get(f"virtualservice-inventory/{uuid}")
+        inv_resp = api_get(session, f"virtualservice-inventory/{uuid}")
         inventory = inv_resp.json() if hasattr(inv_resp, "json") else inv_resp or {}
     except Exception:
         pass
@@ -152,5 +152,11 @@ def toggle_vs(name: str, *, enable: bool, skip_prompt: bool = False) -> None:
         raise SystemExit(1)
 
     vs["enabled"] = enable
-    session.put(f"virtualservice/{vs['uuid']}", data=vs)
+    # avisdk does NOT raise on 4xx/5xx — route through api_put so a failed
+    # destructive write is reported instead of printing success.
+    try:
+        api_put(session, f"virtualservice/{vs['uuid']}", data=vs)
+    except AviApiError as exc:
+        console.print(f"[red]Failed to {action} Virtual Service '{name}': {exc}[/red]")
+        raise SystemExit(1) from None
     console.print(f"[green]Virtual Service '{name}' {action}d.[/green]")

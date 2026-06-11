@@ -44,6 +44,8 @@ class TestCheckAkoStatus:
             patch("vmware_avi.ops.ako_pod.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_pod.K8sConnectionManager") as MockK8s,
         ):
+            # Production code goes through K8sConnectionManager.from_config().
+            MockK8s.from_config.return_value = MockK8s.return_value
             MockK8s.return_value.core_v1.return_value = mock_k8s_core_v1
             MockK8s.return_value.namespace = "avi-system"
             from vmware_avi.ops.ako_pod import check_ako_status
@@ -55,6 +57,8 @@ class TestCheckAkoStatus:
             patch("vmware_avi.ops.ako_pod.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_pod.K8sConnectionManager") as MockK8s,
         ):
+            # Production code goes through K8sConnectionManager.from_config().
+            MockK8s.from_config.return_value = MockK8s.return_value
             MockK8s.return_value.core_v1.return_value = mock_k8s_core_v1
             MockK8s.return_value.namespace = "avi-system"
             from vmware_avi.ops.ako_pod import check_ako_status
@@ -75,6 +79,8 @@ class TestViewAkoLogs:
             patch("vmware_avi.ops.ako_pod.load_config", return_value=sample_config),
             patch("vmware_avi.ops.ako_pod.K8sConnectionManager") as MockK8s,
         ):
+            # Production code goes through K8sConnectionManager.from_config().
+            MockK8s.from_config.return_value = MockK8s.return_value
             MockK8s.return_value.core_v1.return_value = mock_k8s_core_v1
             MockK8s.return_value.namespace = "avi-system"
             from vmware_avi.ops.ako_pod import view_ako_logs

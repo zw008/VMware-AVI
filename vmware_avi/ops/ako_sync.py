@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager
+from vmware_avi.connection import AviConnectionManager, api_get
 from vmware_avi.k8s_connection import K8sConnectionManager
 
 console = Console()
@@ -15,7 +15,7 @@ console = Console()
 def check_sync_status(context: str | None = None) -> None:
     """Check whether K8s Ingress objects are in sync with AVI Controller VS objects."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
 
     from kubernetes.client import NetworkingV1Api
 
@@ -25,7 +25,7 @@ def check_sync_status(context: str | None = None) -> None:
 
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
-    resp = session.get("virtualservice", params={"page_size": "1000"})
+    resp = api_get(session, "virtualservice", params={"page_size": "1000"})
     vs_list = resp.json().get("results", [])
     avi_count = len(vs_list)
 
@@ -46,7 +46,7 @@ def check_sync_status(context: str | None = None) -> None:
 def show_sync_diff(context: str | None = None) -> None:
     """Show specific inconsistencies between K8s and AVI Controller."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
 
     from kubernetes.client import NetworkingV1Api
 
@@ -58,7 +58,7 @@ def show_sync_diff(context: str | None = None) -> None:
 
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
-    resp = session.get("virtualservice", params={"page_size": "1000"})
+    resp = api_get(session, "virtualservice", params={"page_size": "1000"})
     vs_list = resp.json().get("results", [])
     avi_names = {vs.get("name", "") for vs in vs_list}
 
@@ -96,7 +96,7 @@ def force_resync(context: str | None = None, *, skip_prompt: bool = False) -> No
             return
 
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
     v1 = k8s.core_v1(context)
     ns = k8s.namespace
 

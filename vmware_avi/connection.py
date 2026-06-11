@@ -1,19 +1,108 @@
 """AVI Controller connection management via avisdk.
 
-Handles multi-controller connections with session reuse.
+Handles multi-controller connections with session reuse, plus centralized
+HTTP error translation: avisdk does NOT raise on 4xx/5xx, so raw
+``resp.json()`` reads silently render API errors as empty results. All ops
+read/write paths should go through ``api_get`` / ``api_post`` / ``api_put``,
+which translate non-2xx responses into teaching ``AviApiError`` exceptions
+and retry transient gateway errors (502/503/504) exactly once.
 """
 
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from avi.sdk.avi_api import ApiSession
 
-from vmware_avi.config import AppConfig, ControllerConfig, load_config
+from vmware_avi.config import AppConfig, ControllerConfig
 
 _log = logging.getLogger("vmware-avi.connection")
+
+# Transient gateway statuses worth a single lightweight retry.
+_RETRYABLE_STATUSES = frozenset({502, 503, 504})
+_RETRY_DELAY_SECONDS = 2.0
+
+
+class AviApiError(Exception):
+    """An AVI Controller API call failed — carries status code, path, and a
+    teaching hint so callers (and agents) know how to correct the request."""
+
+    def __init__(self, message: str, *, status_code: int | None = None, path: str = "") -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.path = path
+
+
+def _hint_for_status(status_code: int, path: str) -> str:
+    """Return a correction hint for a failed API call."""
+    if status_code == 404:
+        return (
+            f"Resource at '{path}' not found — run the corresponding list "
+            "command to get the exact name/uuid."
+        )
+    if status_code in (401, 403):
+        return (
+            "Authentication/permission failure — check credentials in "
+            "~/.vmware-avi/.env and the configured tenant."
+        )
+    if status_code in _RETRYABLE_STATUSES:
+        return (
+            "Controller temporarily unavailable (gateway error) — retry "
+            "shortly or check Controller health with: vmware-avi doctor"
+        )
+    return "Check request parameters and Controller state."
+
+
+def _api_request(session: ApiSession, method: str, path: str, **kwargs):
+    """Issue a request via avisdk and translate non-2xx into AviApiError.
+
+    Retries exactly once on transient gateway errors (502/503/504), but only
+    for GET — a non-idempotent POST/PUT may have already been applied when the
+    gateway returned 5xx, so re-sending it could double-apply. Other 4xx/5xx
+    are never retried. Responses without an integer ``status_code`` (e.g. test
+    doubles returning dicts) pass through unchanged.
+    """
+    retried = False
+    while True:
+        resp = getattr(session, method)(path, **kwargs)
+        status = getattr(resp, "status_code", None)
+        if not isinstance(status, int) or status < 400:
+            return resp
+
+        if status in _RETRYABLE_STATUSES and not retried and method.lower() == "get":
+            retried = True
+            _log.warning(
+                "AVI API %s '%s' returned HTTP %d — retrying once in %.0fs",
+                method.upper(), path, status, _RETRY_DELAY_SECONDS,
+            )
+            time.sleep(_RETRY_DELAY_SECONDS)
+            continue
+
+        body = (getattr(resp, "text", "") or "")[:200]
+        raise AviApiError(
+            f"AVI API {method.upper()} '{path}' failed with HTTP {status}: "
+            f"{body or '(empty body)'}. {_hint_for_status(status, path)}",
+            status_code=status,
+            path=path,
+        )
+
+
+def api_get(session: ApiSession, path: str, **kwargs):
+    """GET via avisdk with centralized error translation (see AviApiError)."""
+    return _api_request(session, "get", path, **kwargs)
+
+
+def api_post(session: ApiSession, path: str, **kwargs):
+    """POST via avisdk with centralized error translation (see AviApiError)."""
+    return _api_request(session, "post", path, **kwargs)
+
+
+def api_put(session: ApiSession, path: str, **kwargs):
+    """PUT via avisdk with centralized error translation (see AviApiError)."""
+    return _api_request(session, "put", path, **kwargs)
 
 
 class AviConnectionManager:
@@ -22,11 +111,6 @@ class AviConnectionManager:
     def __init__(self, config: AppConfig) -> None:
         self._config = config
         self._sessions: dict[str, ApiSession] = {}
-
-    @classmethod
-    def from_config(cls, config: AppConfig | None = None) -> AviConnectionManager:
-        cfg = config or load_config()
-        return cls(cfg)
 
     def connect(self, controller_name: str | None = None) -> ApiSession:
         """Connect to a controller by name, or the active controller."""
@@ -44,7 +128,15 @@ class AviConnectionManager:
             except Exception:
                 del self._sessions[ctrl.name]
 
-        session = self._create_session(ctrl)
+        try:
+            session = self._create_session(ctrl)
+        except ConnectionError as exc:
+            raise AviApiError(
+                f"AVI Controller '{ctrl.name}' ({ctrl.host}) unreachable: {exc}. "
+                "Check the controller address and credentials in "
+                "~/.vmware-avi/config.yaml, then run: vmware-avi doctor",
+                path="login",
+            ) from exc
         self._sessions[ctrl.name] = session
         return session
 

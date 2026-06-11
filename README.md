@@ -7,7 +7,7 @@
 
 English | [中文](README-CN.md)
 
-AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool — 30 tools across 10 categories.
+AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool — 28 tools across 10 categories.
 
 > **Dual mode**: Traditional AVI Controller management + AKO K8s operations in one skill.
 >
@@ -284,7 +284,7 @@ vmware-avi ako amko status
 
 ## MCP Server
 
-The MCP server exposes all 30 tools via the [Model Context Protocol](https://modelcontextprotocol.io). Works with any MCP-compatible client.
+The MCP server exposes all 28 tools via the [Model Context Protocol](https://modelcontextprotocol.io). Works with any MCP-compatible client.
 
 **After `uv tool install vmware-avi`, start the MCP server with one command** (v1.5.15+):
 
@@ -330,7 +330,7 @@ vmware-avi-mcp
 
 </details>
 
-### MCP Tools (30)
+### MCP Tools (28)
 
 | Category | Tools |
 |----------|-------|
@@ -341,9 +341,9 @@ vmware-avi-mcp
 | Service Engine (2) | `se_list`, `se_health` |
 | AKO Pod (4) | `ako_status`, `ako_logs`, `ako_restart`, `ako_version` |
 | AKO Config (3) | `ako_config_show`, `ako_config_diff`, `ako_config_upgrade` |
-| Ingress Diagnostics (4) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose`, `ako_ingress_fix_suggest` |
+| Ingress Diagnostics (3) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose` |
 | Sync Diagnostics (3) | `ako_sync_status`, `ako_sync_diff`, `ako_sync_force` |
-| Multi-cluster (3) | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` |
+| Multi-cluster (2) | `ako_clusters`, `ako_amko_status` |
 
 ---
 
@@ -479,7 +479,7 @@ Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists
 
 | Skill | Scope | Tools | Install |
 |-------|-------|:-----:|---------|
-| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI load balancer, AKO K8s operations | 30 | `uv tool install vmware-avi` |
+| **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI load balancer, AKO K8s operations | 28 | `uv tool install vmware-avi` |
 | **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM lifecycle, deployment, guest ops, cluster | 34 | `uv tool install vmware-aiops` |
 | **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | Read-only monitoring, alarms, events | 7 | `uv tool install vmware-monitor` |
 | **[vmware-storage](https://github.com/zw008/VMware-Storage)** | Datastores, iSCSI, vSAN | 11 | `uv tool install vmware-storage` |

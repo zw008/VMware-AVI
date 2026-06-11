@@ -73,8 +73,6 @@ Complete command reference for the `vmware-avi` CLI (v1.4.0).
 | `vmware-avi ako ingress-map` | Show Ingress to VS mapping across all namespaces | -- |
 | `vmware-avi ako ingress-diagnose <name>` | Diagnose why an Ingress has no corresponding VS | `<name>` (required), `--namespace <ns>` (default: `default`) |
 
-> Note: `ako_ingress_fix_suggest` is available as an MCP tool but does not have a dedicated CLI subcommand. It provides fix recommendations programmatically.
-
 ## AKO Sync Commands (`vmware-avi ako sync-*`)
 
 | Command | Description | Arguments / Flags |
@@ -89,8 +87,6 @@ Complete command reference for the `vmware-avi` CLI (v1.4.0).
 |---------|-------------|-------------------|
 | `vmware-avi ako clusters` | List all clusters with AKO deployed | -- |
 | `vmware-avi ako amko-status` | Show AMKO (multi-cluster GSLB) status | -- |
-
-> Note: `ako_cluster_overview` (cross-cluster AKO status overview) is available as an MCP tool. In CLI mode, use `vmware-avi ako clusters` for per-cluster listing.
 
 ## Destructive Operations Summary
 

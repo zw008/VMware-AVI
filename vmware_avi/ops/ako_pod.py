@@ -31,7 +31,7 @@ def _get_ako_pod_name(core_v1, namespace: str) -> str:
 def check_ako_status(context: str | None = None) -> None:
     """Check AKO pod status and readiness."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
     v1 = k8s.core_v1(context)
     ns = k8s.namespace
 
@@ -69,11 +69,15 @@ def check_ako_status(context: str | None = None) -> None:
 def view_ako_logs(tail: int = 100, since: str = "", context: str | None = None) -> None:
     """View AKO pod logs."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
     v1 = k8s.core_v1(context)
     ns = k8s.namespace
 
-    pod_name = _get_ako_pod_name(v1, ns)
+    try:
+        pod_name = _get_ako_pod_name(v1, ns)
+    except RuntimeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise SystemExit(1)
 
     kwargs: dict = {"name": pod_name, "namespace": ns, "tail_lines": tail}
     if since:
@@ -103,11 +107,16 @@ def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> Non
             return
 
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
     v1 = k8s.core_v1(context)
     ns = k8s.namespace
 
-    pod_name = _get_ako_pod_name(v1, ns)
+    try:
+        pod_name = _get_ako_pod_name(v1, ns)
+    except RuntimeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise SystemExit(1)
+
     v1.delete_namespaced_pod(pod_name, ns)
     console.print(f"[green]AKO pod '{pod_name}' deleted. StatefulSet will recreate it.[/green]")
 
@@ -115,11 +124,16 @@ def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> Non
 def show_ako_version(context: str | None = None) -> None:
     """Show AKO version from pod image."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
     v1 = k8s.core_v1(context)
     ns = k8s.namespace
 
-    pod_name = _get_ako_pod_name(v1, ns)
+    try:
+        pod_name = _get_ako_pod_name(v1, ns)
+    except RuntimeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise SystemExit(1)
+
     pod = v1.read_namespaced_pod(pod_name, ns)
 
     images = [c.image for c in pod.spec.containers]

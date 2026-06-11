@@ -27,7 +27,7 @@ compatibility: >
 
 > **Disclaimer**: This is a community-maintained open-source project and is **not affiliated with, endorsed by, or sponsored by VMware, Inc. or Broadcom Inc.** "VMware", "NSX", and "AVI" are trademarks of Broadcom. Source code is publicly auditable at [github.com/zw008/VMware-AVI](https://github.com/zw008/VMware-AVI) under the MIT license.
 
-AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operations — 30 MCP tools.
+AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operations — 28 MCP tools.
 
 > **Dual mode**: Traditional AVI Controller management + AKO K8s operations in one skill.
 > **Family**: [vmware-aiops](https://github.com/zw008/VMware-AIops) (VM lifecycle), [vmware-monitor](https://github.com/zw008/VMware-Monitor) (inventory/health), [vmware-storage](https://github.com/zw008/VMware-Storage) (iSCSI/vSAN), [vmware-vks](https://github.com/zw008/VMware-VKS) (Tanzu Kubernetes), [vmware-nsx](https://github.com/zw008/VMware-NSX) (NSX networking), [vmware-nsx-security](https://github.com/zw008/VMware-NSX-Security) (DFW/firewall), [vmware-aria](https://github.com/zw008/VMware-Aria) (metrics/alerts/capacity), [vmware-harden](https://github.com/zw008/VMware-Harden) (compliance baselines).
@@ -137,7 +137,7 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 | Automated pipelines | **MCP** | Type-safe parameters, structured output |
 | AKO troubleshooting | **CLI** | Interactive log tailing, Helm diff output |
 
-## MCP Tools (30 — 24 read, 6 write)
+## MCP Tools (28 — 22 read, 6 write)
 
 | Category | Tools | R/W |
 |----------|-------|:---:|
@@ -152,12 +152,12 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 | | `ako_restart` | Write |
 | AKO Config (3) | `ako_config_show`, `ako_config_diff` | Read |
 | | `ako_config_upgrade` | Write |
-| Ingress Diagnostics (4) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose`, `ako_ingress_fix_suggest` | Read |
+| Ingress Diagnostics (3) | `ako_ingress_check`, `ako_ingress_map`, `ako_ingress_diagnose` | Read |
 | Sync Diagnostics (3) | `ako_sync_status`, `ako_sync_diff` | Read |
 | | `ako_sync_force` | Write |
-| Multi-cluster (3) | `ako_clusters`, `ako_cluster_overview`, `ako_amko_status` | Read |
+| Multi-cluster (2) | `ako_clusters`, `ako_amko_status` | Read |
 
-**Read/write split**: 24 tools are read-only, 6 modify state. Write tools require double confirmation and are audit-logged.
+**Read/write split**: 22 tools are read-only, 6 modify state. Write tools require double confirmation and are audit-logged.
 
 ## CLI Quick Reference
 

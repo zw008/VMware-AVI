@@ -15,7 +15,7 @@ console = Console()
 def check_ingress_annotations(namespace: str, context: str | None = None) -> None:
     """Validate Ingress annotations in a namespace."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
 
     from kubernetes.client import NetworkingV1Api
 
@@ -66,7 +66,7 @@ def check_ingress_annotations(namespace: str, context: str | None = None) -> Non
 def show_ingress_map(context: str | None = None) -> None:
     """Show Ingress to VS mapping across all namespaces."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
 
     from kubernetes.client import NetworkingV1Api
 
@@ -100,7 +100,7 @@ def diagnose_ingress(
 ) -> None:
     """Deep diagnosis of a specific Ingress."""
     cfg = load_config()
-    k8s = K8sConnectionManager(cfg)
+    k8s = K8sConnectionManager.from_config(cfg)
 
     from kubernetes.client import NetworkingV1Api
 

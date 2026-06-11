@@ -9,7 +9,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager
+from vmware_avi.connection import AviConnectionManager, api_get
 
 console = Console()
 
@@ -20,7 +20,7 @@ def list_certificates() -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = session.get("sslkeyandcertificate")
+    resp = api_get(session, "sslkeyandcertificate")
     certs = resp.json().get("results", [])
 
     table = Table(title="SSL Certificates")
@@ -47,7 +47,7 @@ def check_expiry(days: int = 30) -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = session.get("sslkeyandcertificate")
+    resp = api_get(session, "sslkeyandcertificate")
     certs = resp.json().get("results", [])
 
     now = datetime.now(timezone.utc)

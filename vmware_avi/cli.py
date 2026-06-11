@@ -20,6 +20,36 @@ app = typer.Typer(
 
 console = Console()
 
+
+def _audit_write(operation: str, resource: str, parameters: dict, result: str = "success") -> None:
+    """Record a CLI write operation to ~/.vmware-avi/audit.log.
+
+    Audit failure must never block the operation — any exception is
+    downgraded to a stderr warning.
+    """
+    try:
+        from vmware_avi.notify.audit import log_operation
+
+        log_operation(operation, resource, parameters, result=result)
+    except Exception as exc:  # noqa: BLE001 — audit must never block
+        print(f"WARNING: audit log write failed: {exc}", file=sys.stderr)
+
+
+def _run_audited(fn, *, operation: str, resource: str, parameters: dict, **kwargs) -> None:
+    """Run a write op and audit its outcome (success / failure)."""
+    try:
+        fn(**kwargs)
+    except SystemExit as exc:
+        code = exc.code if isinstance(exc.code, int) else 1
+        _audit_write(operation, resource, parameters, result="success" if code == 0 else "failure")
+        raise
+    except Exception:
+        _audit_write(operation, resource, parameters, result="failure")
+        raise
+    else:
+        _audit_write(operation, resource, parameters)
+
+
 # --- Sub-apps ---
 
 vs_app = typer.Typer(help="Virtual Service management", no_args_is_help=True)
@@ -158,7 +188,10 @@ def vs_enable(name: str = typer.Argument(help="Virtual Service name")) -> None:
     """Enable a Virtual Service."""
     from vmware_avi.ops.vs_mgmt import toggle_vs
 
-    toggle_vs(name, enable=True)
+    _run_audited(
+        lambda: toggle_vs(name, enable=True),
+        operation="vs_enable", resource=name, parameters={"enable": True},
+    )
 
 
 @vs_app.command("disable")
@@ -166,7 +199,10 @@ def vs_disable(name: str = typer.Argument(help="Virtual Service name")) -> None:
     """Disable a Virtual Service (requires confirmation)."""
     from vmware_avi.ops.vs_mgmt import toggle_vs
 
-    toggle_vs(name, enable=False)
+    _run_audited(
+        lambda: toggle_vs(name, enable=False),
+        operation="vs_disable", resource=name, parameters={"enable": False},
+    )
 
 
 # --- Pool commands ---
@@ -188,7 +224,11 @@ def pool_enable(
     """Enable a pool member (restore traffic)."""
     from vmware_avi.ops.pool_mgmt import toggle_pool_member
 
-    toggle_pool_member(pool, server, enable=True)
+    _run_audited(
+        lambda: toggle_pool_member(pool, server, enable=True),
+        operation="pool_member_enable", resource=pool,
+        parameters={"server": server, "enable": True},
+    )
 
 
 @pool_app.command("disable")
@@ -199,7 +239,11 @@ def pool_disable(
     """Disable a pool member (graceful drain, requires confirmation)."""
     from vmware_avi.ops.pool_mgmt import toggle_pool_member
 
-    toggle_pool_member(pool, server, enable=False)
+    _run_audited(
+        lambda: toggle_pool_member(pool, server, enable=False),
+        operation="pool_member_disable", resource=pool,
+        parameters={"server": server, "enable": False},
+    )
 
 
 # --- SSL commands ---
@@ -296,7 +340,11 @@ def ako_restart(
     """Restart AKO pod (requires confirmation)."""
     from vmware_avi.ops.ako_pod import restart_ako
 
-    restart_ako(context)
+    _run_audited(
+        lambda: restart_ako(context),
+        operation="ako_restart", resource="ako-pod",
+        parameters={"context": context or ""},
+    )
 
 
 @ako_app.command("version")
@@ -335,7 +383,14 @@ def ako_config_upgrade_cmd(
     """Helm upgrade AKO (requires confirmation)."""
     from vmware_avi.ops.ako_config import upgrade_ako
 
-    upgrade_ako(dry_run)
+    if dry_run:
+        upgrade_ako(dry_run)
+        return
+    _run_audited(
+        lambda: upgrade_ako(dry_run),
+        operation="ako_config_upgrade", resource="ako-helm-release",
+        parameters={"dry_run": False},
+    )
 
 
 # --- AKO ingress sub-commands ---
@@ -394,7 +449,10 @@ def ako_sync_force_cmd() -> None:
     """Force AKO resync (requires confirmation)."""
     from vmware_avi.ops.ako_sync import force_resync
 
-    force_resync()
+    _run_audited(
+        lambda: force_resync(),
+        operation="ako_sync_force", resource="ako-pod", parameters={},
+    )
 
 
 # --- AKO multi-cluster ---

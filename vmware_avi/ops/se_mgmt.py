@@ -7,7 +7,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager
+from vmware_avi.connection import AviConnectionManager, api_get
 
 console = Console()
 
@@ -24,7 +24,7 @@ def list_service_engines() -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = session.get("serviceengine-inventory")
+    resp = api_get(session, "serviceengine-inventory")
     ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
 
     table = Table(title="Service Engines")
@@ -63,7 +63,7 @@ def check_se_health() -> None:
     # Build SE-UUID → set of VS-UUIDs it hosts, then collapse to counts.
     # De-duping per VS (not per (VS, VIP) pair) ensures a VS with multiple
     # VIPs landing on the same SE still only counts once.
-    vs_resp = session.get("virtualservice-inventory")
+    vs_resp = api_get(session, "virtualservice-inventory")
     se_vs_map: dict[str, set[str]] = {}
     for vs in (vs_resp.json() if hasattr(vs_resp, "json") else vs_resp).get("results", []):
         vs_uuid = vs.get("uuid") or (vs.get("config") or {}).get("uuid", "")
@@ -81,7 +81,7 @@ def check_se_health() -> None:
                 if se_uuid:
                     se_vs_map.setdefault(se_uuid, set()).add(vs_uuid)
 
-    resp = session.get("serviceengine-inventory")
+    resp = api_get(session, "serviceengine-inventory")
     ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
 
     console.print("\n[bold]Service Engine Health[/bold]")

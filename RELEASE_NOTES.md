@@ -1,3 +1,24 @@
+## v1.5.36 (2026-06-12) — AKO release-blocker fix, honest write results, error translation
+
+### Fixed
+- **All AKO Kubernetes operations were crashing** (`AttributeError`) — `K8sConnectionManager` was
+  built with the wrong config type at 10 call sites; now via `from_config()`. Status/logs/restart/
+  version, sync, and ingress all work again. (Class-level test mocks had hidden the break.)
+- **Write operations no longer report success on a failed PUT** — avisdk doesn't raise on 4xx/5xx,
+  so `vs enable/disable` and pool-member drain now check the status code and surface a teaching error.
+- **MCP `ako_config_upgrade` no longer corrupts the stdio channel** — added a `confirmed=False`
+  preview gate (it previously printed to real stdout and blocked on stdin).
+- Null-safe analytics log fields; pool `vs_filter` ref normalization.
+
+### Added
+- Centralized `AviApiError` translation in the connection layer (404 teaching hint, GET-only
+  retry-once on 502/503/504, unreachable-controller hint).
+- CLI write operations are now audited.
+
+### Changed
+- Removed two duplicate MCP tools (`ako_ingress_fix_suggest`, `ako_cluster_overview`); tool count
+  is now **28 (22 read / 6 write)**, reflected across SKILL.md and READMEs.
+
 ## v1.5.35 (2026-06-10) — security fix: TLS verification now actually enforced
 
 ### Fixed
