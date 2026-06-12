@@ -1,3 +1,9 @@
+## v1.5.37 (2026-06-12) — backlog: AKO sync-diff accuracy
+
+### Fixed
+- `show_sync_diff` no longer falsely flags shard-mode Ingresses as "Missing on Controller" — it now also
+  matches AKO-created pool names and prints a best-effort caveat. (#13)
+
 ## v1.5.36 (2026-06-12) — AKO release-blocker fix, honest write results, error translation
 
 ### Fixed

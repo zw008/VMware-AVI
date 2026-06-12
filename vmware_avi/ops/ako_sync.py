@@ -62,6 +62,16 @@ def show_sync_diff(context: str | None = None) -> None:
     vs_list = resp.json().get("results", [])
     avi_names = {vs.get("name", "") for vs in vs_list}
 
+    # In AKO's default shard mode, many Ingresses do NOT get a dedicated
+    # Virtual Service — they are folded into shared parent VSes and represented
+    # by pools/hostrules instead. Matching only against VS-name suffixes would
+    # then falsely flag healthy sharded Ingresses as "Missing on Controller".
+    # AKO names pools predictably from the cluster/namespace/host/path/ingress,
+    # embedding the Ingress short name as a '-'-delimited token, so we also
+    # check pool names before deciding an Ingress is truly missing.
+    pool_resp = api_get(session, "pool", params={"page_size": "1000"})
+    pool_names = {p.get("name", "") for p in pool_resp.json().get("results", [])}
+
     table = Table(title="Sync Diff")
     table.add_column("Type")
     table.add_column("Name")
@@ -69,14 +79,46 @@ def show_sync_diff(context: str | None = None) -> None:
 
     for name in sorted(k8s_names):
         short = name.split("/")[-1]
-        if short not in avi_names and not any(
+        in_vs = short in avi_names or any(
             avi_name.endswith(f"-{short}") or avi_name.endswith(f"--{short}")
             for avi_name in avi_names
-        ):
+        )
+        if not in_vs and not _matched_by_pool(short, pool_names):
             table.add_row("Ingress", name, "[red]Missing on Controller[/red]")
 
     console.print(table)
+    # Caveat: AKO pool/VS naming depends on the AKO version and shard config
+    # (hostname vs namespace sharding, custom prefixes), so the pool-name
+    # heuristic below is best-effort. An Ingress reported "Missing" here may
+    # still be served via a shared shard VS under a non-standard pool name —
+    # confirm with 'vmware-avi pool list' / 'vmware-avi ako status' before
+    # acting on a missing result.
+    console.print(
+        "[dim]Note: shard-mode Ingresses are matched heuristically against "
+        "AKO pool names; verify any 'Missing' result before acting.[/dim]"
+    )
     console.print()
+
+
+def _matched_by_pool(ingress_short: str, pool_names: set[str]) -> bool:
+    """Return True if an AKO pool name plausibly belongs to this Ingress.
+
+    AKO derives pool names from the cluster/namespace/host/path/ingress and
+    joins the parts with single ('-') or double ('--') dashes. We treat the
+    Ingress short name as matched if it appears as a whole '-'-delimited token
+    inside any pool name (so 'web' matches 'cluster--default-web-foo' but not
+    'webstore'). This is intentionally conservative: a near-miss on the token
+    boundary is better than silently hiding a genuinely missing Ingress.
+    """
+    if not ingress_short:
+        return False
+    for pool_name in pool_names:
+        # Normalize the double-dash cluster separator to a single dash so the
+        # token split is uniform, then compare against '-'-delimited tokens.
+        tokens = pool_name.replace("--", "-").split("-")
+        if ingress_short in tokens:
+            return True
+    return False
 
 
 def force_resync(context: str | None = None, *, skip_prompt: bool = False) -> None:
