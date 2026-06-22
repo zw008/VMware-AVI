@@ -81,7 +81,21 @@ def vs_status(name: str) -> str:
 
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
-@vmware_tool(risk_level="high")
+@vmware_tool(
+    risk_level="high",
+    undo=lambda params, result: None
+    if isinstance(result, str) and result.startswith("[preview]")
+    else {
+        "tool": "vs_toggle",
+        "params": {
+            "name": params.get("name"),
+            "enable": not params.get("enable"),
+            "confirmed": True,
+        },
+        "skill": "avi",
+        "note": "Inverse of vs_toggle: toggle the Virtual Service back to its prior state.",
+    },
+)
 def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
     """[WRITE] Enable or disable a Virtual Service. Disabling stops all traffic to this VS.
 
