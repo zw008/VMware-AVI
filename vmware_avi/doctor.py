@@ -31,21 +31,34 @@ def _check(label: str, ok: bool, detail: str = "") -> bool:
 def run_doctor() -> bool:
     """Run all diagnostic checks. Returns True if all pass."""
     console.print("\n[bold]vmware-avi doctor[/bold]\n")
+
+    if not CONFIG_FILE.exists():
+        console.print(
+            "[yellow]No config found.[/yellow] Run [cyan]vmware-avi init[/cyan] "
+            "for guided setup (writes config.yaml + .env, grep-safe password).\n"
+            f"Or create {CONFIG_FILE} and {ENV_FILE} by hand "
+            "(see config.example.yaml and .env.example).\n"
+        )
+
     results: list[bool] = []
 
     # 1. Config directory
-    results.append(_check(
-        "Config directory exists",
-        CONFIG_DIR.exists(),
-        str(CONFIG_DIR),
-    ))
+    results.append(
+        _check(
+            "Config directory exists",
+            CONFIG_DIR.exists(),
+            str(CONFIG_DIR),
+        )
+    )
 
     # 2. Config file
-    results.append(_check(
-        "config.yaml exists",
-        CONFIG_FILE.exists(),
-        str(CONFIG_FILE),
-    ))
+    results.append(
+        _check(
+            "config.yaml exists",
+            CONFIG_FILE.exists(),
+            str(CONFIG_FILE),
+        )
+    )
 
     # 3. .env file
     env_exists = ENV_FILE.exists()
@@ -56,11 +69,13 @@ def run_doctor() -> bool:
 
         mode = ENV_FILE.stat().st_mode
         secure = not (mode & (stat.S_IRWXG | stat.S_IRWXO))
-        results.append(_check(
-            ".env permissions are 600",
-            secure,
-            oct(stat.S_IMODE(mode)),
-        ))
+        results.append(
+            _check(
+                ".env permissions are 600",
+                secure,
+                oct(stat.S_IMODE(mode)),
+            )
+        )
 
     # 4. avisdk
     try:
@@ -72,11 +87,13 @@ def run_doctor() -> bool:
     # 5. kubernetes client
     try:
         k8s_mod = importlib.import_module("kubernetes")
-        results.append(_check(
-            "kubernetes client installed",
-            True,
-            getattr(k8s_mod, "__version__", "ok"),
-        ))
+        results.append(
+            _check(
+                "kubernetes client installed",
+                True,
+                getattr(k8s_mod, "__version__", "ok"),
+            )
+        )
     except ImportError:
         results.append(_check("kubernetes client installed", False, "pip install kubernetes"))
 
@@ -108,17 +125,21 @@ def run_doctor() -> bool:
                     mgr = AviConnectionManager(cfg)
                     mgr.connect(ctrl.name)
                     mgr.disconnect(ctrl.name)
-                    results.append(_check(
-                        f"Controller '{ctrl.name}' reachable",
-                        True,
-                        ctrl.host,
-                    ))
+                    results.append(
+                        _check(
+                            f"Controller '{ctrl.name}' reachable",
+                            True,
+                            ctrl.host,
+                        )
+                    )
                 except Exception as exc:
-                    results.append(_check(
-                        f"Controller '{ctrl.name}' reachable",
-                        False,
-                        str(exc)[:80],
-                    ))
+                    results.append(
+                        _check(
+                            f"Controller '{ctrl.name}' reachable",
+                            False,
+                            str(exc)[:80],
+                        )
+                    )
         except Exception:
             pass
 
@@ -132,4 +153,9 @@ def run_doctor() -> bool:
     passed = sum(results)
     total = len(results)
     console.print(f"\n  {passed}/{total} checks passed.\n")
+    if not all(results):
+        console.print(
+            "  Some checks failed. Run [cyan]vmware-avi init[/cyan] to (re)create "
+            "config.yaml + .env, or edit them under ~/.vmware-avi/ by hand.\n"
+        )
     return all(results)

@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
 
 import typer
 from rich.console import Console
+
+from vmware_avi._errors import cli_errors, teach_and_exit
 
 app = typer.Typer(
     name="vmware-avi",
@@ -43,8 +44,10 @@ def _run_audited(fn, *, operation: str, resource: str, parameters: dict, **kwarg
         code = exc.code if isinstance(exc.code, int) else 1
         _audit_write(operation, resource, parameters, result="success" if code == 0 else "failure")
         raise
-    except Exception:
+    except Exception as exc:
         _audit_write(operation, resource, parameters, result="failure")
+        # Give write commands the same auth/TLS teaching read commands get.
+        teach_and_exit(exc)  # raises typer.Exit(1) for auth/TLS; else returns
         raise
     else:
         _audit_write(operation, resource, parameters)
@@ -87,6 +90,7 @@ def mcp_cmd() -> None:
     Equivalent to the legacy `vmware-avi-mcp` console script.
     """
     import sys
+
     if sys.version_info < (3, 10):
         msg = (
             f"ERROR: vmware-avi MCP server requires Python >= 3.10 "
@@ -104,39 +108,17 @@ def mcp_cmd() -> None:
 
 
 @app.command()
-def init() -> None:
-    """Generate config.yaml and .env templates."""
-    from vmware_avi.config import CONFIG_DIR, CONFIG_FILE, ENV_FILE
+def init(
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing config."),
+    skip_test: bool = typer.Option(
+        False, "--skip-test", help="Skip the post-setup connection test."
+    ),
+) -> None:
+    """Interactive first-run setup: write config.yaml + .env, then optionally
+    verify the connection with doctor."""
+    from vmware_avi.init_wizard import run_init
 
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-
-    if not CONFIG_FILE.exists():
-        template = Path(__file__).parent.parent / "config.example.yaml"
-        if template.exists():
-            CONFIG_FILE.write_text(template.read_text())
-        else:
-            CONFIG_FILE.write_text(
-                "controllers:\n"
-                "  - name: my-avi\n"
-                "    host: avi-controller.example.com\n"
-                "    username: admin\n"
-                "    api_version: '22.1.4'\n"
-                "    tenant: admin\n\n"
-                "default_controller: my-avi\n\n"
-                "ako:\n"
-                "  kubeconfig: ~/.kube/config\n"
-                "  namespace: avi-system\n"
-            )
-        console.print(f"[green]Created:[/green] {CONFIG_FILE}")
-    else:
-        console.print(f"[yellow]Exists:[/yellow] {CONFIG_FILE}")
-
-    if not ENV_FILE.exists():
-        ENV_FILE.write_text("MY_AVI_PASSWORD=changeme\n")
-        ENV_FILE.chmod(0o600)
-        console.print(f"[green]Created:[/green] {ENV_FILE} (chmod 600)")
-    else:
-        console.print(f"[yellow]Exists:[/yellow] {ENV_FILE}")
+    raise SystemExit(run_init(force=force, skip_test=skip_test))
 
 
 @app.command("config")
@@ -166,6 +148,7 @@ def config_show() -> None:
 
 
 @vs_app.command("list")
+@cli_errors
 def vs_list(
     controller: str | None = typer.Option(None, help="Controller name"),
 ) -> None:
@@ -190,7 +173,9 @@ def vs_enable(name: str = typer.Argument(help="Virtual Service name")) -> None:
 
     _run_audited(
         lambda: toggle_vs(name, enable=True),
-        operation="vs_enable", resource=name, parameters={"enable": True},
+        operation="vs_enable",
+        resource=name,
+        parameters={"enable": True},
     )
 
 
@@ -201,7 +186,9 @@ def vs_disable(name: str = typer.Argument(help="Virtual Service name")) -> None:
 
     _run_audited(
         lambda: toggle_vs(name, enable=False),
-        operation="vs_disable", resource=name, parameters={"enable": False},
+        operation="vs_disable",
+        resource=name,
+        parameters={"enable": False},
     )
 
 
@@ -209,6 +196,7 @@ def vs_disable(name: str = typer.Argument(help="Virtual Service name")) -> None:
 
 
 @pool_app.command("members")
+@cli_errors
 def pool_members(pool: str = typer.Argument(help="Pool name")) -> None:
     """List pool members and health status."""
     from vmware_avi.ops.pool_mgmt import list_pool_members
@@ -226,7 +214,8 @@ def pool_enable(
 
     _run_audited(
         lambda: toggle_pool_member(pool, server, enable=True),
-        operation="pool_member_enable", resource=pool,
+        operation="pool_member_enable",
+        resource=pool,
         parameters={"server": server, "enable": True},
     )
 
@@ -241,7 +230,8 @@ def pool_disable(
 
     _run_audited(
         lambda: toggle_pool_member(pool, server, enable=False),
-        operation="pool_member_disable", resource=pool,
+        operation="pool_member_disable",
+        resource=pool,
         parameters={"server": server, "enable": False},
     )
 
@@ -250,6 +240,7 @@ def pool_disable(
 
 
 @ssl_app.command("list")
+@cli_errors
 def ssl_list_cmd() -> None:
     """List all SSL certificates."""
     from vmware_avi.ops.ssl_mgmt import list_certificates
@@ -271,6 +262,7 @@ def ssl_expiry(
 
 
 @se_app.command("list")
+@cli_errors
 def se_list_cmd() -> None:
     """List all Service Engines."""
     from vmware_avi.ops.se_mgmt import list_service_engines
@@ -342,7 +334,8 @@ def ako_restart(
 
     _run_audited(
         lambda: restart_ako(context),
-        operation="ako_restart", resource="ako-pod",
+        operation="ako_restart",
+        resource="ako-pod",
         parameters={"context": context or ""},
     )
 
@@ -388,7 +381,8 @@ def ako_config_upgrade_cmd(
         return
     _run_audited(
         lambda: upgrade_ako(dry_run),
-        operation="ako_config_upgrade", resource="ako-helm-release",
+        operation="ako_config_upgrade",
+        resource="ako-helm-release",
         parameters={"dry_run": False},
     )
 
@@ -451,7 +445,9 @@ def ako_sync_force_cmd() -> None:
 
     _run_audited(
         lambda: force_resync(),
-        operation="ako_sync_force", resource="ako-pod", parameters={},
+        operation="ako_sync_force",
+        resource="ako-pod",
+        parameters={},
     )
 
 
