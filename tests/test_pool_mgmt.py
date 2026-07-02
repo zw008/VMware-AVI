@@ -33,9 +33,12 @@ def _pool_list_session(
             resp.json.return_value = {"results": inventory}
         elif path == "pool":
             resp.json.return_value = {"results": pools}
-        elif path.startswith("poolgroup/"):
-            pg_uuid = path.split("/", 1)[1]
-            resp.json.return_value = poolgroups.get(pg_uuid, {})
+        elif path == "poolgroup":
+            # Single LIST call resolves every pool group (reverse-map in
+            # memory) — no per-pool-group GET. uuid is echoed into each entry.
+            resp.json.return_value = {
+                "results": [{"uuid": uuid, **pg} for uuid, pg in poolgroups.items()]
+            }
         else:
             resp.json.return_value = {}
         return resp
@@ -146,8 +149,11 @@ class TestListPools:
         from vmware_avi.ops.pool_mgmt import list_pools
         list_pools(vs_filter="canary")
         called_paths = [c.args[0] for c in mock_avi_session.get.call_args_list]
-        assert any(p == "poolgroup/poolgroup-pg1" for p in called_paths), \
-            "expected poolgroup membership to be resolved for VSes with poolgroups"
+        # Membership resolved via a SINGLE poolgroup LIST call, never per-PG GETs.
+        assert called_paths.count("poolgroup") == 1, \
+            "expected exactly one poolgroup LIST call to resolve members"
+        assert not any(p.startswith("poolgroup/") for p in called_paths), \
+            "must not issue per-pool-group GETs (N+1)"
 
 
 @pytest.mark.unit

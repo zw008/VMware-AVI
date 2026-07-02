@@ -9,7 +9,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager, api_get
+from vmware_avi.connection import AviConnectionManager, api_get_all
 
 console = Console()
 
@@ -20,8 +20,7 @@ def list_certificates() -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = api_get(session, "sslkeyandcertificate")
-    certs = resp.json().get("results", [])
+    certs = api_get_all(session, "sslkeyandcertificate")
 
     table = Table(title="SSL Certificates")
     table.add_column("Name")
@@ -47,8 +46,10 @@ def check_expiry(days: int = 30) -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = api_get(session, "sslkeyandcertificate")
-    certs = resp.json().get("results", [])
+    # Expiry filtering stays client-side — AVI has no server-side "not_after
+    # within N days" filter — but we page through the full cert collection so
+    # the "N expiring" tally is honest in large environments.
+    certs = api_get_all(session, "sslkeyandcertificate")
 
     now = datetime.now(timezone.utc)
     expiring: list[dict] = []

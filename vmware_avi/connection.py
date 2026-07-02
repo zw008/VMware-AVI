@@ -25,6 +25,10 @@ _log = logging.getLogger("vmware-avi.connection")
 _RETRYABLE_STATUSES = frozenset({502, 503, 504})
 _RETRY_DELAY_SECONDS = 2.0
 
+# Default page size for full-collection reads. AVI caps an unbounded GET, so a
+# fixed page silently truncates large environments; api_get_all pages past it.
+_DEFAULT_PAGE_SIZE = 200
+
 
 class AviApiError(Exception):
     """An AVI Controller API call failed — carries status code, path, and a
@@ -103,6 +107,38 @@ def api_post(session: ApiSession, path: str, **kwargs):
 def api_put(session: ApiSession, path: str, **kwargs):
     """PUT via avisdk with centralized error translation (see AviApiError)."""
     return _api_request(session, "put", path, **kwargs)
+
+
+def api_get_all(
+    session: ApiSession,
+    path: str,
+    *,
+    page_size: int = _DEFAULT_PAGE_SIZE,
+    params: dict | None = None,
+    **kwargs,
+) -> list[dict]:
+    """GET every page of an AVI collection, concatenating ``results``.
+
+    A single collection GET returns at most one page, so callers that read the
+    first page only (or pass a fixed ``page_size``) silently truncate — and any
+    count/diff derived from that read is quietly wrong on Controllers holding
+    more objects than one page. This walks ``page=1,2,...`` until a short page
+    is returned, so tallies stay honest. Returns the flat list of result dicts;
+    the per-item shape is identical to ``api_get(...).json()['results']``.
+    """
+    merged: list[dict] = []
+    base = {k: str(v) for k, v in (params or {}).items()}
+    base["page_size"] = str(page_size)
+    page = 1
+    while True:
+        resp = api_get(session, path, params={**base, "page": str(page)}, **kwargs)
+        body = resp.json() if hasattr(resp, "json") else resp
+        results = (body or {}).get("results", []) or []
+        merged.extend(results)
+        if len(results) < page_size:
+            break
+        page += 1
+    return merged
 
 
 class AviConnectionManager:

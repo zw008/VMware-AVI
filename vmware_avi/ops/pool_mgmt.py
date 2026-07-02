@@ -7,7 +7,13 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviApiError, AviConnectionManager, api_get, api_put
+from vmware_avi.connection import (
+    AviApiError,
+    AviConnectionManager,
+    api_get,
+    api_get_all,
+    api_put,
+)
 
 console = Console()
 
@@ -46,20 +52,33 @@ def list_pools(vs_filter: str | None = None) -> None:
             for ref in entry.get("poolgroups") or []:
                 poolgroup_uuids.add(ref.rsplit("/", 1)[-1].split("#")[0].split("?")[0])
 
-        # Resolve each pool group to its member pools so VSes whose traffic
+        # Resolve pool groups to their member pools so VSes whose traffic
         # routes through a PoolGroup still surface their underlying pools.
-        for pg_uuid in poolgroup_uuids:
-            try:
-                pg = api_get(session, f"poolgroup/{pg_uuid}").json()
-            except Exception:
-                continue
-            for member in pg.get("members") or []:
-                ref = member.get("pool_ref")
-                if ref:
-                    referenced.add(ref.rsplit("/", 1)[-1].split("#")[0].split("?")[0])
+        # Fetch the whole poolgroup collection ONCE and reverse-map by uuid in
+        # memory (same pattern as se_mgmt.check_se_health) — the previous
+        # per-pool-group GET was an N+1 that scaled with the VS→PG fan-out.
+        if poolgroup_uuids:
+            pg_by_uuid = {
+                pg.get("uuid", ""): pg for pg in api_get_all(session, "poolgroup")
+            }
+            for pg_uuid in poolgroup_uuids:
+                pg = pg_by_uuid.get(pg_uuid)
+                if not pg:
+                    continue
+                for member in pg.get("members") or []:
+                    ref = member.get("pool_ref")
+                    if ref:
+                        referenced.add(ref.rsplit("/", 1)[-1].split("#")[0].split("?")[0])
 
-    resp = api_get(session, "pool", params={"fields": "name,uuid,servers,enabled,health_monitor_refs"})
-    pools = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
+    # Page through the full pool collection. The vs_filter match stays
+    # client-side: it selects pools referenced by VSes whose *name* contains a
+    # substring, and AVI has no server-side "VS-name substring -> pools" filter,
+    # so filtering must happen against the in-memory referenced set below.
+    pools = api_get_all(
+        session,
+        "pool",
+        params={"fields": "name,uuid,servers,enabled,health_monitor_refs"},
+    )
 
     table = Table(title=f"Pools{f' (matching VS {vs_filter!r})' if vs_filter else ''}")
     table.add_column("Name")

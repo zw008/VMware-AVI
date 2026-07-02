@@ -7,7 +7,7 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager, api_get
+from vmware_avi.connection import AviConnectionManager, api_get, api_get_all
 
 console = Console()
 
@@ -24,8 +24,7 @@ def list_service_engines() -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
 
-    resp = api_get(session, "serviceengine-inventory")
-    ses = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
+    ses = api_get_all(session, "serviceengine-inventory")
 
     table = Table(title="Service Engines")
     table.add_column("Name")

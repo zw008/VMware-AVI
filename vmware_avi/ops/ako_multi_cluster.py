@@ -29,18 +29,26 @@ def list_clusters() -> None:
     table.add_column("AKO Status")
     table.add_column("AKO Version")
 
+    # The fan-out (one kubectl call per context) is inherent: each context is a
+    # distinct API server, so there is no single bulk query. We keep it, but
+    # isolate each probe — a per-context timeout, and no exception is allowed to
+    # abort the whole overview if one cluster is unreachable/slow.
     for ctx in contexts:
-        pod_check = subprocess.run(
-            [
-                "kubectl", "--context", ctx,
-                "get", "pods", "-n", "avi-system",
-                "-l", "app.kubernetes.io/name=ako",
-                "-o", "jsonpath={.items[0].status.phase}:{.items[0].spec.containers[0].image}",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        try:
+            pod_check = subprocess.run(
+                [
+                    "kubectl", "--context", ctx,
+                    "get", "pods", "-n", "avi-system",
+                    "-l", "app.kubernetes.io/name=ako",
+                    "-o", "jsonpath={.items[0].status.phase}:{.items[0].spec.containers[0].image}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            table.add_row(ctx, "[red]Unreachable[/red]", "-")
+            continue
         if pod_check.returncode == 0 and pod_check.stdout:
             parts = pod_check.stdout.split(":", 1)
             phase = parts[0] if parts else "Unknown"

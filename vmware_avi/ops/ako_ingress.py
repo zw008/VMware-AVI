@@ -23,6 +23,25 @@ def check_ingress_annotations(namespace: str, context: str | None = None) -> Non
 
     ingresses = net_v1.list_namespaced_ingress(namespace)
 
+    # Fetch every secret in the namespace ONCE, then check TLS references by
+    # local set membership — the previous code issued a read_namespaced_secret
+    # per Ingress per TLS entry (nested N+1). ``None`` means the list failed, so
+    # we skip (rather than falsely report) TLS existence checks.
+    secret_names: set[str] | None = set()
+    try:
+        secrets = k8s.core_v1(context).list_namespaced_secret(namespace)
+        secret_names = {
+            s.metadata.name
+            for s in secrets.items
+            if s.metadata and s.metadata.name
+        }
+    except Exception as exc:
+        console.print(
+            f"[yellow]Could not list secrets in '{namespace}': "
+            f"{sanitize(str(exc)[:100])} — TLS secret existence not verified.[/yellow]"
+        )
+        secret_names = None
+
     table = Table(title=f"Ingress Annotations Check: {namespace}")
     table.add_column("Ingress")
     table.add_column("IngressClass")
@@ -43,19 +62,10 @@ def check_ingress_annotations(namespace: str, context: str | None = None) -> Non
         elif ingress_class not in ("avi", "avi-lb"):
             issues.append(f"IngressClass '{ingress_class}' may not be AKO")
 
-        if ing.spec.tls:
+        if ing.spec.tls and secret_names is not None:
             for tls in ing.spec.tls:
-                if tls.secret_name:
-                    try:
-                        k8s.core_v1(context).read_namespaced_secret(
-                            tls.secret_name, namespace
-                        )
-                    except Exception as exc:
-                        err_msg = str(exc)
-                        if "404" in err_msg or "Not Found" in err_msg:
-                            issues.append(f"TLS secret '{tls.secret_name}' not found")
-                        else:
-                            issues.append(f"TLS secret '{tls.secret_name}' check failed: {err_msg[:100]}")
+                if tls.secret_name and tls.secret_name not in secret_names:
+                    issues.append(f"TLS secret '{tls.secret_name}' not found")
 
         status = "[green]OK[/green]" if not issues else "[red]ISSUES[/red]"
         table.add_row(name, ingress_class or "N/A", "; ".join(issues) or "-", status)

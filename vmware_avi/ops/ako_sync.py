@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviConnectionManager, api_get
+from vmware_avi.connection import AviConnectionManager, api_get_all
 from vmware_avi.k8s_connection import K8sConnectionManager
 
 console = Console()
@@ -25,8 +25,10 @@ def check_sync_status(context: str | None = None) -> None:
 
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
-    resp = api_get(session, "virtualservice", params={"page_size": "1000"})
-    vs_list = resp.json().get("results", [])
+    # Page through the full VS collection — a hardcoded page_size=1000 silently
+    # undercounts (and falsely reports "counts match") once an environment
+    # exceeds one page.
+    vs_list = api_get_all(session, "virtualservice")
     avi_count = len(vs_list)
 
     console.print("\n[bold]Sync Status[/bold]")
@@ -58,8 +60,7 @@ def show_sync_diff(context: str | None = None) -> None:
 
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()
-    resp = api_get(session, "virtualservice", params={"page_size": "1000"})
-    vs_list = resp.json().get("results", [])
+    vs_list = api_get_all(session, "virtualservice")
     avi_names = {vs.get("name", "") for vs in vs_list}
 
     # In AKO's default shard mode, many Ingresses do NOT get a dedicated
@@ -69,8 +70,7 @@ def show_sync_diff(context: str | None = None) -> None:
     # AKO names pools predictably from the cluster/namespace/host/path/ingress,
     # embedding the Ingress short name as a '-'-delimited token, so we also
     # check pool names before deciding an Ingress is truly missing.
-    pool_resp = api_get(session, "pool", params={"page_size": "1000"})
-    pool_names = {p.get("name", "") for p in pool_resp.json().get("results", [])}
+    pool_names = {p.get("name", "") for p in api_get_all(session, "pool")}
 
     table = Table(title="Sync Diff")
     table.add_column("Type")

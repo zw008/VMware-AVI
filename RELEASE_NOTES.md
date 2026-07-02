@@ -1,3 +1,14 @@
+## v1.7.2 (2026-07-02) — pool/ingress N+1 + honest pagination
+
+### Fixed
+- **Pool & ingress round-trip storms.** `list_pools` (with a VS filter) issued a
+  per-pool-group GET, and `check_ingress_annotations` read one Kubernetes secret
+  per Ingress TLS entry. Both collapse to a single bulk list + in-memory join
+  (the `check_se_health` pattern). List operations and AKO sync now page through
+  results (new `api_get_all`) so counts/diffs are accurate instead of silently
+  capped at 1000. A per-cluster `kubectl` probe failure no longer aborts the whole
+  multi-cluster listing. Output shape unchanged.
+
 ## v1.7.1 (2026-07-02) — family version alignment
 
 No code changes. Version bump to stay aligned with the v1.7.1 family release

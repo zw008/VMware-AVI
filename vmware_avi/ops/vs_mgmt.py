@@ -7,7 +7,13 @@ from rich.table import Table
 
 from vmware_avi._safety import sanitize as _sanitize
 from vmware_avi.config import load_config
-from vmware_avi.connection import AviApiError, AviConnectionManager, api_get, api_put
+from vmware_avi.connection import (
+    AviApiError,
+    AviConnectionManager,
+    api_get,
+    api_get_all,
+    api_put,
+)
 
 console = Console()
 
@@ -18,8 +24,7 @@ def list_virtual_services(controller_name: str | None = None) -> None:
     mgr = AviConnectionManager(cfg)
     session = mgr.connect(controller_name)
 
-    resp = api_get(session, "virtualservice", params={"fields": "name,enabled,uuid,vip"})
-    results = resp.json().get("results", [])
+    results = api_get_all(session, "virtualservice", params={"fields": "name,enabled,uuid,vip"})
 
     table = Table(title="Virtual Services")
     table.add_column("Name")
