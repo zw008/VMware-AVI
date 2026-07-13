@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from rich.console import Console
-
 from vmware_policy import sanitize as _policy_sanitize
 
 console = Console()

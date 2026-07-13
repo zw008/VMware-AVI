@@ -58,27 +58,35 @@ def show_analytics(vs_name: str) -> None:
     # Controller versions 22.x/30.x. The per-entity path
     # (analytics/metrics/virtualservice/<uuid>) returns empty `series` on
     # several Controller builds when the entity has no in-band traffic.
-    metric_ids = ",".join([
-        "l4_client.avg_bandwidth",
-        "l4_client.avg_complete_conns",
-        "l4_client.avg_new_established_conns",
-        "l7_client.avg_client_txn_latency",
-        "l7_client.pct_response_errors",
-        "l7_client.sum_total_responses",
-    ])
+    metric_ids = ",".join(
+        [
+            "l4_client.avg_bandwidth",
+            "l4_client.avg_complete_conns",
+            "l4_client.avg_new_established_conns",
+            "l7_client.avg_client_txn_latency",
+            "l7_client.pct_response_errors",
+            "l7_client.sum_total_responses",
+        ]
+    )
     # AVI 22.x requires POST for /analytics/metrics/collection; GET responds
     # with HTTP 404 "Pl. use Post request". This is the *collections* API,
     # so the body must wrap each query in a metric_requests[] entry —
     # flattening the params at the top level yields HTTP 404
     # {"error": "Empty Request"}.
-    resp = api_post(session, "analytics/metrics/collection", data={
-        "metric_requests": [{
-            "metric_id": metric_ids,
-            "entity_uuid": uuid,
-            "step": 300,
-            "limit": 12,
-        }],
-    })
+    resp = api_post(
+        session,
+        "analytics/metrics/collection",
+        data={
+            "metric_requests": [
+                {
+                    "metric_id": metric_ids,
+                    "entity_uuid": uuid,
+                    "step": 300,
+                    "limit": 12,
+                }
+            ],
+        },
+    )
     payload = resp.json() if hasattr(resp, "json") else resp
 
     # Response shape: {"series": {uuid: [ {header, data}, ... ]}} for
@@ -95,8 +103,10 @@ def show_analytics(vs_name: str) -> None:
 
     console.print(f"\n[bold]Analytics: {sanitize(vs_name)}[/bold]")
     if not series_list:
-        console.print("  [yellow]No metric data returned — the VS may have no traffic "
-                      "in the queried window, or analytics collection is disabled.[/yellow]")
+        console.print(
+            "  [yellow]No metric data returned — the VS may have no traffic "
+            "in the queried window, or analytics collection is disabled.[/yellow]"
+        )
         console.print()
         return
 
@@ -116,7 +126,9 @@ def show_analytics(vs_name: str) -> None:
         if values:
             latest_val = values[-1].get("value")
             if latest_val is not None:
-                latest = f"{latest_val:.2f}" if isinstance(latest_val, (int, float)) else str(latest_val)
+                latest = (
+                    f"{latest_val:.2f}" if isinstance(latest_val, (int, float)) else str(latest_val)
+                )
         avg = stats.get("mean")
         avg_str = f"{avg:.2f}" if isinstance(avg, (int, float)) else "N/A"
         table.add_row(metric, latest, avg_str, unit)
@@ -150,13 +162,17 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
     # AVI 22.x requires the VS UUID as an explicit ``virtualservice`` URL
     # parameter on /analytics/logs; passing it only inside ``filter`` as
     # ``co(vs_uuid,<uuid>)`` yields HTTP 400 "VirtualService ID required".
-    resp = api_get(session, "analytics/logs", params={
-        "type": "1",
-        "virtualservice": uuid,
-        "filter": "ge(response_code,400)",
-        "page_size": "50",
-        "duration": str(duration_seconds),
-    })
+    resp = api_get(
+        session,
+        "analytics/logs",
+        params={
+            "type": "1",
+            "virtualservice": uuid,
+            "filter": "ge(response_code,400)",
+            "page_size": "50",
+            "duration": str(duration_seconds),
+        },
+    )
     logs = (resp.json() if hasattr(resp, "json") else resp).get("results", [])
 
     console.print(f"\n[bold]Error Logs: {vs_name} (last {since} = {duration_seconds}s)[/bold]")

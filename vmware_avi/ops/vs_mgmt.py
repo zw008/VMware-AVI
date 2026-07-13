@@ -98,8 +98,10 @@ def show_vs_status(name: str) -> None:
     # Health / oper status
     oper_state = oper_status.get("state") or runtime.get("oper_status_state", "UNKNOWN")
     state_color = {
-        "OPER_UP": "green", "OPER_AWAITING_UP": "yellow",
-        "OPER_DOWN": "red", "OPER_DISABLED": "dim",
+        "OPER_UP": "green",
+        "OPER_AWAITING_UP": "yellow",
+        "OPER_DOWN": "red",
+        "OPER_DISABLED": "dim",
     }.get(oper_state, "white")
     console.print(f"  Health:    [{state_color}]{oper_state}[/{state_color}]")
 

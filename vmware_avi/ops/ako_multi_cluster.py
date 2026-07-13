@@ -37,10 +37,17 @@ def list_clusters() -> None:
         try:
             pod_check = subprocess.run(
                 [
-                    "kubectl", "--context", ctx,
-                    "get", "pods", "-n", "avi-system",
-                    "-l", "app.kubernetes.io/name=ako",
-                    "-o", "jsonpath={.items[0].status.phase}:{.items[0].spec.containers[0].image}",
+                    "kubectl",
+                    "--context",
+                    ctx,
+                    "get",
+                    "pods",
+                    "-n",
+                    "avi-system",
+                    "-l",
+                    "app.kubernetes.io/name=ako",
+                    "-o",
+                    "jsonpath={.items[0].status.phase}:{.items[0].spec.containers[0].image}",
                 ],
                 capture_output=True,
                 text=True,
@@ -71,9 +78,15 @@ def show_amko_status() -> None:
     for selector in ("app.kubernetes.io/name=amko", "app=amko"):
         result = subprocess.run(
             [
-                "kubectl", "get", "pods", "-n", "avi-system",
-                "-l", selector,
-                "-o", "wide",
+                "kubectl",
+                "get",
+                "pods",
+                "-n",
+                "avi-system",
+                "-l",
+                selector,
+                "-o",
+                "wide",
             ],
             capture_output=True,
             text=True,

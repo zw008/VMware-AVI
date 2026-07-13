@@ -4,7 +4,6 @@ Exposes 28 tools (22 read, 6 write) for AVI Controller + AKO K8s operations.
 Entry point: vmware-avi-mcp (defined in pyproject.toml).
 """
 
-
 import logging
 from io import StringIO
 from typing import Optional
@@ -21,6 +20,7 @@ mcp = FastMCP("vmware-avi")
 # Output capture helper
 # ---------------------------------------------------------------------------
 
+
 def _capture_output(func, *args, **kwargs) -> str:
     """Run a function and capture its Rich console output as plain text."""
     import importlib  # noqa: F401 — used via sys.modules lookup
@@ -28,6 +28,7 @@ def _capture_output(func, *args, **kwargs) -> str:
 
     buf = StringIO()
     from rich.console import Console
+
     capture_console = Console(file=buf, force_terminal=False, width=120)
 
     mod_name = func.__module__
@@ -52,7 +53,15 @@ def _capture_output(func, *args, **kwargs) -> str:
 # Traditional mode — AVI Controller
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def vs_list(controller: Optional[str] = None) -> str:
     """[READ] List all Virtual Services with name, VIP, enabled state, and health score.
@@ -63,13 +72,22 @@ def vs_list(controller: Optional[str] = None) -> str:
         controller: AVI controller name from config (optional, uses default).
     """
     from vmware_avi.ops.vs_mgmt import list_virtual_services
+
     return _capture_output(list_virtual_services, controller)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def vs_status(name: str) -> str:
-    """[READ] Show detailed status for a specific Virtual Service — VIP, pool, health, connections, and throughput.
+    """[READ] Show detailed status for a specific Virtual Service — VIP, pool,
+    health, connections, and throughput.
 
     Use vs_list first to find the exact VS name.
 
@@ -77,24 +95,34 @@ def vs_status(name: str) -> str:
         name: Exact Virtual Service name.
     """
     from vmware_avi.ops.vs_mgmt import show_vs_status
+
     return _capture_output(show_vs_status, name)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(
     risk_level="high",
-    undo=lambda params, result: None
-    if isinstance(result, str) and result.startswith("[preview]")
-    else {
-        "tool": "vs_toggle",
-        "params": {
-            "name": params.get("name"),
-            "enable": not params.get("enable"),
-            "confirmed": True,
-        },
-        "skill": "avi",
-        "note": "Inverse of vs_toggle: toggle the Virtual Service back to its prior state.",
-    },
+    undo=lambda params, result: (
+        None
+        if isinstance(result, str) and result.startswith("[preview]")
+        else {
+            "tool": "vs_toggle",
+            "params": {
+                "name": params.get("name"),
+                "enable": not params.get("enable"),
+                "confirmed": True,
+            },
+            "skill": "avi",
+            "note": "Inverse of vs_toggle: toggle the Virtual Service back to its prior state.",
+        }
+    ),
 )
 def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
     """[WRITE] Enable or disable a Virtual Service. Disabling stops all traffic to this VS.
@@ -112,6 +140,7 @@ def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
             Default False returns a preview-only message. Ignored when enable=True.
     """
     from vmware_avi.ops.vs_mgmt import toggle_vs
+
     if not enable and not confirmed:
         return (
             f"[preview] Would disable Virtual Service '{name}', stopping all traffic to this VS. "
@@ -120,7 +149,14 @@ def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
     return _capture_output(toggle_vs, name, enable=enable, skip_prompt=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def pool_list(vs_filter: Optional[str] = None) -> str:
     """[READ] Discover pools on the Controller.
@@ -134,10 +170,18 @@ def pool_list(vs_filter: Optional[str] = None) -> str:
             referenced by those VS only.
     """
     from vmware_avi.ops.pool_mgmt import list_pools
+
     return _capture_output(list_pools, vs_filter)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def pool_members(pool: str) -> str:
     """[READ] List all members of a pool with server IP, port, enabled state, and health status.
@@ -149,10 +193,18 @@ def pool_members(pool: str) -> str:
         pool: Pool name.
     """
     from vmware_avi.ops.pool_mgmt import list_pool_members
+
     return _capture_output(list_pool_members, pool)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="medium")
 def pool_member_enable(pool: str, server: str) -> str:
     """[WRITE] Enable a pool member to start receiving traffic.
@@ -164,13 +216,22 @@ def pool_member_enable(pool: str, server: str) -> str:
         server: Server IP address.
     """
     from vmware_avi.ops.pool_mgmt import toggle_pool_member
+
     return _capture_output(toggle_pool_member, pool, server, enable=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="high")
 def pool_member_disable(pool: str, server: str, confirmed: bool = False) -> str:
-    """[WRITE] Disable a pool member with graceful drain — existing connections complete, no new traffic.
+    """[WRITE] Disable a pool member with graceful drain — existing connections
+    complete, no new traffic.
 
     Use during maintenance windows or rolling deployments.
 
@@ -190,10 +251,18 @@ def pool_member_disable(pool: str, server: str, confirmed: bool = False) -> str:
             "Re-invoke with confirmed=True to execute."
         )
     from vmware_avi.ops.pool_mgmt import toggle_pool_member
+
     return _capture_output(toggle_pool_member, pool, server, enable=False, skip_prompt=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ssl_list() -> str:
     """[READ] List all SSL/TLS certificates stored on the AVI Controller.
@@ -206,10 +275,18 @@ def ssl_list() -> str:
     only need certificates expiring within the next N days.
     """
     from vmware_avi.ops.ssl_mgmt import list_certificates
+
     return _capture_output(list_certificates)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ssl_expiry_check(days: int = 30) -> str:
     """[READ] Check which SSL certificates expire within N days (default 30).
@@ -220,10 +297,18 @@ def ssl_expiry_check(days: int = 30) -> str:
         days: Check certs expiring within this many days (default 30).
     """
     from vmware_avi.ops.ssl_mgmt import check_expiry
+
     return _capture_output(check_expiry, days)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def vs_analytics(vs_name: str) -> str:
     """[READ] Show performance metrics for one Virtual Service over the last hour.
@@ -241,13 +326,22 @@ def vs_analytics(vs_name: str) -> str:
             Fails with a 'not found' message if no VS matches.
     """
     from vmware_avi.ops.analytics import show_analytics
+
     return _capture_output(show_analytics, vs_name)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def vs_error_logs(vs_name: str, since: str = "1h") -> str:
-    """[READ] Show recent request error logs for a Virtual Service — HTTP status codes, client IPs, URIs, and response times.
+    """[READ] Show recent request error logs for a Virtual Service — HTTP status
+    codes, client IPs, URIs, and response times.
 
     Use to diagnose 5xx errors or latency spikes.
 
@@ -256,10 +350,18 @@ def vs_error_logs(vs_name: str, since: str = "1h") -> str:
         since: Time window, e.g. '1h', '30m', '2d' (default '1h').
     """
     from vmware_avi.ops.analytics import show_error_logs
+
     return _capture_output(show_error_logs, vs_name, since)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def se_list() -> str:
     """[READ] List all Service Engines (AVI data-plane VMs) on the Controller.
@@ -273,10 +375,18 @@ def se_list() -> str:
     investigating degraded Virtual Service health.
     """
     from vmware_avi.ops.se_mgmt import list_service_engines
+
     return _capture_output(list_service_engines)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def se_health() -> str:
     """[READ] Check health of all Service Engines — operational status and connected-VS counts.
@@ -286,6 +396,7 @@ def se_health() -> str:
     issue is at the SE level.
     """
     from vmware_avi.ops.se_mgmt import check_se_health
+
     return _capture_output(check_se_health)
 
 
@@ -293,10 +404,19 @@ def se_health() -> str:
 # AKO mode — Kubernetes
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_status(context: Optional[str] = None) -> str:
-    """[READ] Check AKO (AVI Kubernetes Operator) pod status — running, restarts, age, and ready state.
+    """[READ] Check AKO (AVI Kubernetes Operator) pod status — running, restarts,
+    age, and ready state.
 
     First step when troubleshooting Ingress or LoadBalancer issues in Tanzu/K8s.
 
@@ -304,13 +424,22 @@ def ako_status(context: Optional[str] = None) -> str:
         context: K8s context name (optional, uses current context).
     """
     from vmware_avi.ops.ako_pod import check_ako_status
+
     return _capture_output(check_ako_status, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_logs(tail: int = 100, since: Optional[str] = None, context: Optional[str] = None) -> str:
-    """[READ] View AKO pod logs to debug Ingress creation failures, sync errors, or AVI Controller connectivity issues.
+    """[READ] View AKO pod logs to debug Ingress creation failures, sync errors,
+    or AVI Controller connectivity issues.
 
     Use 'since' to narrow the time window.
 
@@ -320,10 +449,18 @@ def ako_logs(tail: int = 100, since: Optional[str] = None, context: Optional[str
         context: K8s context name (optional, uses current context).
     """
     from vmware_avi.ops.ako_pod import view_ako_logs
+
     return _capture_output(view_ako_logs, tail, since or "", context)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="high")
 def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
     """[WRITE] Restart AKO pod by deleting it (its StatefulSet recreates it automatically).
@@ -341,15 +478,24 @@ def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
     if not confirmed:
         ctx_hint = f" in context '{context}'" if context else ""
         return (
-            f"[preview] Would delete the AKO pod{ctx_hint} — its StatefulSet will recreate it automatically. "
+            f"[preview] Would delete the AKO pod{ctx_hint} — "
+            "its StatefulSet will recreate it automatically. "
             "Brief traffic disruption is possible during restart. "
             "Re-invoke with confirmed=True to execute."
         )
     from vmware_avi.ops.ako_pod import restart_ako
+
     return _capture_output(restart_ako, context, skip_prompt=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_version(context: Optional[str] = None) -> str:
     """[READ] Show AKO version, Helm chart version, and container image tag.
@@ -360,18 +506,35 @@ def ako_version(context: Optional[str] = None) -> str:
         context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_pod import show_ako_version
+
     return _capture_output(show_ako_version, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_config_show() -> str:
-    """[READ] Show current AKO Helm values.yaml configuration — controller IP, cloud name, network settings, and feature flags."""
+    """[READ] Show current AKO Helm values.yaml configuration — controller IP,
+    cloud name, network settings, and feature flags."""
     from vmware_avi.ops.ako_config import show_ako_config
+
     return _capture_output(show_ako_config)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_config_diff() -> str:
     """[READ] Show pending Helm value changes that haven't been applied yet.
@@ -379,10 +542,18 @@ def ako_config_diff() -> str:
     Use before ako_config_upgrade to review what will change.
     """
     from vmware_avi.ops.ako_config import diff_ako_config
+
     return _capture_output(diff_ako_config)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="medium")
 def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
     """[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety.
@@ -402,6 +573,7 @@ def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
             Default False returns a preview-only message. Ignored when dry_run=True.
     """
     from vmware_avi.ops.ako_config import upgrade_ako
+
     if not dry_run and not confirmed:
         return (
             "[preview] Would helm-upgrade the AKO release in avi-system from the "
@@ -411,20 +583,36 @@ def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
     return _capture_output(upgrade_ako, dry_run, skip_prompt=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_ingress_check(namespace: str, context: Optional[str] = None) -> str:
-    """[READ] Validate Ingress annotations in a namespace — checks for unsupported or misspelled AKO annotations that prevent VS creation.
+    """[READ] Validate Ingress annotations in a namespace — checks for unsupported
+    or misspelled AKO annotations that prevent VS creation.
 
     Args:
         namespace: K8s namespace to check.
         context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_ingress import check_ingress_annotations
+
     return _capture_output(check_ingress_annotations, namespace, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_ingress_map(context: Optional[str] = None) -> str:
     """[READ] Show mapping between K8s Ingress resources and AVI Virtual Services.
@@ -435,12 +623,22 @@ def ako_ingress_map(context: Optional[str] = None) -> str:
         context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_ingress import show_ingress_map
+
     return _capture_output(show_ingress_map, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
-def ako_ingress_diagnose(name: str, namespace: str = "default", context: Optional[str] = None) -> str:
+def ako_ingress_diagnose(
+    name: str, namespace: str = "default", context: Optional[str] = None
+) -> str:
     """[READ] Diagnose why a specific Ingress has no corresponding AVI Virtual Service.
 
     Reads the Ingress and validates three things: IngressClass is 'avi' or 'avi-lb',
@@ -457,10 +655,18 @@ def ako_ingress_diagnose(name: str, namespace: str = "default", context: Optiona
             Discover context names with ako_clusters.
     """
     from vmware_avi.ops.ako_ingress import diagnose_ingress
+
     return _capture_output(diagnose_ingress, name, namespace, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_sync_status(context: Optional[str] = None) -> str:
     """[READ] Check sync status between K8s resources and AVI Controller objects.
@@ -471,13 +677,22 @@ def ako_sync_status(context: Optional[str] = None) -> str:
         context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_sync import check_sync_status
+
     return _capture_output(check_sync_status, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_sync_diff(context: Optional[str] = None) -> str:
-    """[READ] Show specific inconsistencies between K8s Ingress/Service definitions and AVI Controller VS/Pool objects.
+    """[READ] Show specific inconsistencies between K8s Ingress/Service definitions
+    and AVI Controller VS/Pool objects.
 
     Use to identify drift.
 
@@ -485,10 +700,18 @@ def ako_sync_diff(context: Optional[str] = None) -> str:
         context: K8s context name (optional).
     """
     from vmware_avi.ops.ako_sync import show_sync_diff
+
     return _capture_output(show_sync_diff, context)
 
 
-@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="high")
 def ako_sync_force(context: Optional[str] = None, confirmed: bool = False) -> str:
     """[WRITE] Force AKO to resync all K8s resources with AVI Controller.
@@ -511,13 +734,22 @@ def ako_sync_force(context: Optional[str] = None, confirmed: bool = False) -> st
             "Re-invoke with confirmed=True to execute."
         )
     from vmware_avi.ops.ako_sync import force_resync
+
     return _capture_output(force_resync, context, skip_prompt=True)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_clusters() -> str:
-    """[READ] List every Kubernetes context in the active kubeconfig and whether AKO is deployed there.
+    """[READ] List every Kubernetes context in the active kubeconfig and whether
+    AKO is deployed there.
 
     Iterates contexts from `kubectl config get-contexts` (KUBECONFIG env var or
     ~/.kube/config) and probes the avi-system namespace in each. Returns a table of
@@ -527,20 +759,31 @@ def ako_clusters() -> str:
     then pass one as `context` to ako_status, ako_logs, or ako_ingress_diagnose.
     """
     from vmware_avi.ops.ako_multi_cluster import list_clusters
+
     return _capture_output(list_clusters)
 
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
+@mcp.tool(
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
 @vmware_tool(risk_level="low")
 def ako_amko_status() -> str:
-    """[READ] Show AMKO (AVI Multi-Cluster Kubernetes Operator) GSLB status — global services, member clusters, and federation health."""
+    """[READ] Show AMKO (AVI Multi-Cluster Kubernetes Operator) GSLB status —
+    global services, member clusters, and federation health."""
     from vmware_avi.ops.ako_multi_cluster import show_amko_status
+
     return _capture_output(show_amko_status)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entry point
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def main() -> None:
     """Entry point for vmware-avi-mcp."""

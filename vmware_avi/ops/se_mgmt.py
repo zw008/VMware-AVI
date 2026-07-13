@@ -74,9 +74,10 @@ def check_se_health() -> None:
                 # VipSeAssigned has no `uuid` field — the SE identity comes
                 # as a ref/url like ".../api/serviceengine/<uuid>#<name>".
                 # Keep the uuid lookup first for builds that inject it.
-                se_uuid = se.get("uuid") or (
-                    se.get("ref") or se.get("url") or ""
-                ).rsplit("/", 1)[-1].split("#")[0]
+                se_uuid = (
+                    se.get("uuid")
+                    or (se.get("ref") or se.get("url") or "").rsplit("/", 1)[-1].split("#")[0]
+                )
                 if se_uuid:
                     se_vs_map.setdefault(se_uuid, set()).add(vs_uuid)
 
@@ -93,9 +94,6 @@ def check_se_health() -> None:
         vs_count = len(se_vs_map.get(uuid, set()))
 
         status_color = "green" if oper == "OPER_UP" else "red"
-        console.print(
-            f"  [{status_color}]{name}[/{status_color}]: {oper}, "
-            f"VS count: {vs_count}"
-        )
+        console.print(f"  [{status_color}]{name}[/{status_color}]: {oper}, VS count: {vs_count}")
 
     console.print()

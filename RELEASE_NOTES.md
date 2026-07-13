@@ -1,3 +1,9 @@
+## v1.7.5 (2026-07-13) — internal lint cleanup + family version alignment
+
+### Internal
+- Style-only lint cleanup (58 findings: long lines, empty f-strings, unused
+  imports, import ordering). No behavior change; MCP tool surface unchanged (28).
+
 ## v1.7.4 (2026-07-13) — family version alignment
 
 ## v1.7.3 (2026-07-03) — family version alignment

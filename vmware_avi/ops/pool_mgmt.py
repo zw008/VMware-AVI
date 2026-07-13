@@ -58,9 +58,7 @@ def list_pools(vs_filter: str | None = None) -> None:
         # memory (same pattern as se_mgmt.check_se_health) — the previous
         # per-pool-group GET was an N+1 that scaled with the VS→PG fan-out.
         if poolgroup_uuids:
-            pg_by_uuid = {
-                pg.get("uuid", ""): pg for pg in api_get_all(session, "poolgroup")
-            }
+            pg_by_uuid = {pg.get("uuid", ""): pg for pg in api_get_all(session, "poolgroup")}
             for pg_uuid in poolgroup_uuids:
                 pg = pg_by_uuid.get(pg_uuid)
                 if not pg:
@@ -132,7 +130,9 @@ def list_pool_members(pool_name: str) -> None:
     console.print(f"  Total members: {len(servers)}")
 
 
-def toggle_pool_member(pool_name: str, server_ip: str, *, enable: bool, skip_prompt: bool = False) -> None:
+def toggle_pool_member(
+    pool_name: str, server_ip: str, *, enable: bool, skip_prompt: bool = False
+) -> None:
     """Enable or disable a pool member.
 
     Args:

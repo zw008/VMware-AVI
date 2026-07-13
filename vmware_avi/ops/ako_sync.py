@@ -54,9 +54,7 @@ def show_sync_diff(context: str | None = None) -> None:
 
     net_v1 = NetworkingV1Api(k8s.get_client(context))
     ingresses = net_v1.list_ingress_for_all_namespaces()
-    k8s_names = {
-        f"{ing.metadata.namespace}/{ing.metadata.name}" for ing in ingresses.items
-    }
+    k8s_names = {f"{ing.metadata.namespace}/{ing.metadata.name}" for ing in ingresses.items}
 
     mgr = AviConnectionManager(cfg)
     session = mgr.connect()

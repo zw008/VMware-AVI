@@ -106,8 +106,7 @@ def _check_env_permissions() -> None:
         mode = ENV_FILE.stat().st_mode
         if mode & (stat.S_IRWXG | stat.S_IRWXO):
             _log.warning(
-                "Security warning: %s has permissions %s (should be 600). "
-                "Run: chmod 600 %s",
+                "Security warning: %s has permissions %s (should be 600). Run: chmod 600 %s",
                 ENV_FILE,
                 oct(stat.S_IMODE(mode)),
                 ENV_FILE,
@@ -136,9 +135,7 @@ class ControllerConfig:
         env_key = f"{self.name.upper().replace('-', '_')}_PASSWORD"
         pw = os.environ.get(env_key, "")
         if not pw:
-            raise OSError(
-                f"Password not found. Set environment variable: {env_key}"
-            )
+            raise OSError(f"Password not found. Set environment variable: {env_key}")
         return _decode_secret(pw)
 
 
@@ -180,8 +177,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     path = config_path or CONFIG_FILE
     if not path.exists():
         raise FileNotFoundError(
-            f"Config file not found: {path}\n"
-            f"Copy config.example.yaml to {CONFIG_FILE} and edit it."
+            f"Config file not found: {path}\nCopy config.example.yaml to {CONFIG_FILE} and edit it."
         )
 
     with open(path) as f:

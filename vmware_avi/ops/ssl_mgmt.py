@@ -68,11 +68,13 @@ def check_expiry(days: int = 30) -> None:
 
         days_left = (not_after - now).days
         if days_left <= days:
-            expiring.append({
-                "name": cert.get("name", ""),
-                "not_after": not_after_str,
-                "days_left": days_left,
-            })
+            expiring.append(
+                {
+                    "name": cert.get("name", ""),
+                    "not_after": not_after_str,
+                    "days_left": days_left,
+                }
+            )
 
     table = Table(title=f"Certificates Expiring Within {days} Days")
     table.add_column("Name")

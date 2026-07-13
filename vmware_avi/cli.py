@@ -5,7 +5,6 @@ Typer-based CLI with subcommands for VS, Pool, SSL, SE, Analytics, and AKO opera
 
 from __future__ import annotations
 
-import logging
 import sys
 
 import typer
@@ -91,7 +90,8 @@ def mcp_cmd() -> None:
     """
     import sys
 
-    if sys.version_info < (3, 10):
+    # Deliberate runtime guard: pip/uv may ignore requires-python (踩坑 #33).
+    if sys.version_info < (3, 10):  # noqa: UP036
         msg = (
             f"ERROR: vmware-avi MCP server requires Python >= 3.10 "
             f"(got {sys.version_info.major}.{sys.version_info.minor}).\n"
@@ -137,7 +137,7 @@ def config_show() -> None:
         console.print(f"  {c.name}: {c.host} (user={c.username}, tenant={c.tenant})")
 
     console.print(f"\n[bold]Default controller:[/bold] {cfg.default_controller or '(first)'}")
-    console.print(f"\n[bold]AKO:[/bold]")
+    console.print("\n[bold]AKO:[/bold]")
     console.print(f"  kubeconfig: {cfg.ako.kubeconfig}")
     console.print(f"  default_context: {cfg.ako.default_context or '(current)'}")
     console.print(f"  namespace: {cfg.ako.namespace}")

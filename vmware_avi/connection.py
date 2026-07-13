@@ -80,7 +80,10 @@ def _api_request(session: ApiSession, method: str, path: str, **kwargs):
             retried = True
             _log.warning(
                 "AVI API %s '%s' returned HTTP %d — retrying once in %.0fs",
-                method.upper(), path, status, _RETRY_DELAY_SECONDS,
+                method.upper(),
+                path,
+                status,
+                _RETRY_DELAY_SECONDS,
             )
             time.sleep(_RETRY_DELAY_SECONDS)
             continue
@@ -185,8 +188,9 @@ class AviConnectionManager:
                 session.post("logout")
             except Exception as e:
                 _log.debug(
-                    "Logout POST failed for controller '%s': %s — dropping "
-                    "session locally anyway", controller_name, e,
+                    "Logout POST failed for controller '%s': %s — dropping session locally anyway",
+                    controller_name,
+                    e,
                 )
             session.delete_session()
             del self._sessions[controller_name]
@@ -240,7 +244,9 @@ class AviConnectionManager:
         if controller_ip != ctrl.host:
             _log.info(
                 "Connecting to AVI Controller: %s (%s -> %s)",
-                ctrl.name, ctrl.host, controller_ip,
+                ctrl.name,
+                ctrl.host,
+                controller_ip,
             )
         else:
             _log.info("Connecting to AVI Controller: %s (%s)", ctrl.name, ctrl.host)

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
-
 from rich.console import Console
 
 from vmware_avi.config import load_config
@@ -48,7 +46,7 @@ def check_ako_status(context: str | None = None) -> None:
             ready = cs.ready
 
         status_color = "green" if phase == "Running" and ready else "red"
-        console.print(f"\n[bold]AKO Pod Status[/bold]")
+        console.print("\n[bold]AKO Pod Status[/bold]")
         console.print(f"  Pod: {pod_name}")
         console.print(f"  Phase: [{status_color}]{phase}[/{status_color}]")
         console.print(f"  Ready: {ready}")
@@ -137,7 +135,7 @@ def show_ako_version(context: str | None = None) -> None:
     pod = v1.read_namespaced_pod(pod_name, ns)
 
     images = [c.image for c in pod.spec.containers]
-    console.print(f"\n[bold]AKO Version[/bold]")
+    console.print("\n[bold]AKO Version[/bold]")
     console.print(f"  Pod: {pod_name}")
     for img in images:
         version = img.split(":")[-1] if ":" in img else "latest"

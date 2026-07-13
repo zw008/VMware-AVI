@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 
 from rich.console import Console
-from rich.table import Table
 
 from vmware_avi.config import CONFIG_DIR, CONFIG_FILE, ENV_FILE, load_config
 

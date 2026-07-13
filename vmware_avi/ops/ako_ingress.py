@@ -30,11 +30,7 @@ def check_ingress_annotations(namespace: str, context: str | None = None) -> Non
     secret_names: set[str] | None = set()
     try:
         secrets = k8s.core_v1(context).list_namespaced_secret(namespace)
-        secret_names = {
-            s.metadata.name
-            for s in secrets.items
-            if s.metadata and s.metadata.name
-        }
+        secret_names = {s.metadata.name for s in secrets.items if s.metadata and s.metadata.name}
     except Exception as exc:
         console.print(
             f"[yellow]Could not list secrets in '{namespace}': "
@@ -105,9 +101,7 @@ def show_ingress_map(context: str | None = None) -> None:
     console.print(table)
 
 
-def diagnose_ingress(
-    name: str, namespace: str = "default", context: str | None = None
-) -> None:
+def diagnose_ingress(name: str, namespace: str = "default", context: str | None = None) -> None:
     """Deep diagnosis of a specific Ingress."""
     cfg = load_config()
     k8s = K8sConnectionManager.from_config(cfg)
@@ -138,10 +132,12 @@ def diagnose_ingress(
     )
     if not ingress_class:
         issues.append("No IngressClass specified")
-        suggestions.append("Add spec.ingressClassName: 'avi-lb' or annotation kubernetes.io/ingress.class: 'avi'")
+        suggestions.append(
+            "Add spec.ingressClassName: 'avi-lb' or annotation kubernetes.io/ingress.class: 'avi'"
+        )
     elif ingress_class not in ("avi", "avi-lb"):
         issues.append(f"IngressClass '{ingress_class}' is not AKO")
-        suggestions.append(f"Change to 'avi' or 'avi-lb'")
+        suggestions.append("Change to 'avi' or 'avi-lb'")
 
     # Check TLS secrets
     if ing.spec.tls:
@@ -153,16 +149,24 @@ def diagnose_ingress(
                     err_msg = str(exc)
                     if "404" in err_msg or "Not Found" in err_msg:
                         issues.append(f"TLS secret '{tls.secret_name}' missing")
-                        suggestions.append(f"Create secret: kubectl create secret tls {tls.secret_name} ...")
+                        suggestions.append(
+                            f"Create secret: kubectl create secret tls {tls.secret_name} ..."
+                        )
                     else:
-                        issues.append(f"TLS secret '{tls.secret_name}' check failed: {err_msg[:100]}")
+                        issues.append(
+                            f"TLS secret '{tls.secret_name}' check failed: {err_msg[:100]}"
+                        )
 
     # Check backend services exist
     if ing.spec.rules:
         for rule in ing.spec.rules:
             if rule.http and rule.http.paths:
                 for path in rule.http.paths:
-                    if not path.backend or not path.backend.service or not path.backend.service.name:
+                    if (
+                        not path.backend
+                        or not path.backend.service
+                        or not path.backend.service.name
+                    ):
                         issues.append("Path has no backend service configured")
                         continue
                     svc_name = path.backend.service.name
@@ -170,13 +174,15 @@ def diagnose_ingress(
                         k8s.core_v1(context).read_namespaced_service(svc_name, namespace)
                     except Exception:
                         issues.append(f"Backend service '{svc_name}' not found")
-                        suggestions.append(f"Verify service '{svc_name}' exists in namespace '{namespace}'")
+                        suggestions.append(
+                            f"Verify service '{svc_name}' exists in namespace '{namespace}'"
+                        )
 
     if issues:
         console.print(f"\n[red]Issues Found ({len(issues)}):[/red]")
         for i, issue in enumerate(issues, 1):
             console.print(f"  {i}. {issue}")
-        console.print(f"\n[yellow]Suggestions:[/yellow]")
+        console.print("\n[yellow]Suggestions:[/yellow]")
         for i, sug in enumerate(suggestions, 1):
             console.print(f"  {i}. {sug}")
     else:
