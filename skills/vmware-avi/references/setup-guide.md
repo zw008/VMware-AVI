@@ -56,7 +56,7 @@ docker run -i --rm \
   vmware-avi-mcp
 ```
 
-The container's `CMD` is `python -m mcp_server`, which is wired through `mcp_server/__main__.py` to the same FastMCP entry point as the CLI subcommand. All 29 tools are available.
+The container's `CMD` is `python -m mcp_server`, which is wired through `mcp_server/__main__.py` to the same FastMCP entry point as the CLI subcommand. All 28 tools are available.
 
 #### Smithery
 
@@ -64,7 +64,7 @@ The container's `CMD` is `python -m mcp_server`, which is wired through `mcp_ser
 
 - `startCommand.type: stdio` — Smithery launches the server over stdio
 - `configSchema.properties.config_path` — optional override for the config file location
-- `commandFunction` — invokes `python -m mcp_server` with `VMWARE_AVI_CONFIG` set from the user's Smithery config
+- `commandFunction` — invokes the `vmware-avi mcp` entry point with `VMWARE_AVI_CONFIG` set from the user's Smithery config
 
 Users can install via the Smithery UI or CLI without managing Python environments locally. Smithery handles the container build and stdio bridge automatically.
 
@@ -115,6 +115,7 @@ controllers:
     tenant: admin
     port: 443
     verify_ssl: true
+    environment: production   # scopes policy rules; see the field table below
 
   - name: staging-avi
     host: avi-staging.example.com
@@ -122,6 +123,7 @@ controllers:
     api_version: "22.1.4"
     tenant: admin
     verify_ssl: false    # lab/self-signed certs only
+    environment: staging
 
 default_controller: prod-avi
 
@@ -142,6 +144,7 @@ ako:
 | `controllers[].tenant` | No | `admin` | AVI tenant name |
 | `controllers[].port` | No | `443` | Controller HTTPS port |
 | `controllers[].verify_ssl` | No | `true` | TLS certificate verification |
+| `controllers[].environment` | Recommended | -- | Which environment this is (`production` / `staging` / `lab`). Policy rules scope by environment; a controller that declares none is treated as unknown. Today its writes run but log a warning — **the next major release will refuse them**. Read-only operations are never affected. |
 | `default_controller` | No | first entry | Which controller to use by default |
 | `ako.kubeconfig` | No | `~/.kube/config` | Path to kubeconfig file |
 | `ako.default_context` | No | current-context | K8s context for AKO operations |

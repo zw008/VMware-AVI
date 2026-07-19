@@ -11,14 +11,34 @@ controllers:
     # verify_ssl: true is the default (v1.5.15+). AVI Controllers commonly ship
     # with self-signed certs — set to false explicitly for those environments.
     verify_ssl: true
+    # Which environment this controller is. Policy scopes by environment: a
+    # controller labelled production requires a named approver
+    # (VMWARE_AUDIT_APPROVED_BY) for irreversible work. A controller that
+    # declares nothing is treated as unknown — today its writes still run but
+    # log a warning, and the next major release will REFUSE them. Read-only
+    # operations are never affected. Run 'vmware-audit policy' to see the rules
+    # in force.
+    environment: production
 
   # Add more controllers as needed:
   # - name: staging-avi
   #   host: avi-staging.example.com
   #   username: admin
+  #   environment: staging
 
 # Which controller to use by default
 default_controller: prod-avi
+
+# Withhold every write tool (vs_toggle, pool member enable/disable, AKO
+# restart/upgrade, force resync) from the MCP registry at startup, so a model
+# cannot call what it cannot see. Off by default, and fail-closed: if the mode is
+# requested but cannot be guaranteed, the MCP server refuses to start rather than
+# silently exposing writes. Read-only operations are never affected. Environment
+# variables win over this file — precedence is VMWARE_AVI_READ_ONLY, then the
+# family-wide VMWARE_READ_ONLY, then this setting, then off — so an operator can
+# lock a deployment down from the MCP client's env block without editing any
+# config file.
+read_only: false
 
 # AKO (Avi Kubernetes Operator) settings
 ako:

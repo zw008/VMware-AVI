@@ -1,3 +1,78 @@
+## v1.8.0 (2026-07-18) — read-only mode, working policy defaults, declared environments
+
+Family release driven by [VMware-AIops#31](https://github.com/zw008/VMware-AIops/issues/31),
+where an operator running Llama 3.3 70B (Goose / OpenShift AI, on-prem H100) had to
+hand-write 17 prompt guardrails to make tool calling reliable. A prompt is advisory — a
+model can ignore it. Every guardrail that could move into the harness has.
+
+### Added
+- **Read-only mode.** Set `VMWARE_READ_ONLY=true` (or `VMWARE_<SKILL>_READ_ONLY`, or
+  `read_only: true` in config.yaml) and every write tool is removed from the MCP registry
+  at start-up. `list_tools()` never offers them, so the model cannot call what it cannot
+  see. **Off by default** — nothing changes unless you turn it on. Fail-closed: if the
+  mode is requested but cannot be guaranteed, the server refuses to start rather than
+  running open.
+- **`environment:` on each config target**, declaring which environment it is
+  (production / staging / lab). Policy rules scope by this value.
+
+### Not changed — the list envelope does not apply here
+
+The rest of the family moved its `[READ]` list tools to a result envelope stating
+`returned` / `total` / `truncated`. vmware-avi deliberately did not: its list tools render
+Rich tables and return the rendered string, so there are no rows to wrap, and `api_get_all`
+walks every page, so `truncated` would be permanently false. Converting four of thirty
+render-style functions would fragment the response style inside one server for no gain.
+
+Separately worth knowing: an ASCII table is a mediocre agent payload (box-drawing burns
+tokens, colour markup leaks into the text). Restructuring AVI's ops layer into data +
+render is real work with its own risk budget, tracked separately.
+
+### Changed — migration, read this
+- **Approval tiers now actually run.** They shipped in v1.6.0 but the engine only ever
+  read `~/.vmware/rules.yaml`, and a fresh install has no such file — so every deny rule,
+  maintenance window and approval tier had been inert on every install that never
+  hand-authored one. A packaged baseline now loads when you have written no rules of your
+  own. Writes at medium risk and above are stamped with their tier in the audit log;
+  irreversible work and guest execution against a target declared `production` require a
+  named approver via `VMWARE_AUDIT_APPROVED_BY`.
+- **`environment:` will become required for writes.** Today a state-changing operation
+  against a target that declares none still runs and logs a warning. **The next major
+  release refuses it.** Declare it now and that upgrade is a no-op:
+
+      targets:
+        prod-vc01:
+          host: vc01.corp.local
+          environment: production
+
+  Read-only operations are never affected, in this release or the next. Check what applies
+  to your targets before upgrading: `vmware-audit policy --operation vm_delete --env <env>`.
+
+### Fixed
+- **Policy glob patterns with a leading wildcard silently matched nothing.** A rule written
+  `operations: ["*_delete"]` parsed fine, read correctly, and never fired — only a trailing
+  `*` was honoured. Now full glob matching, for operations and environments alike.
+- Config-path overrides (`VMWARE_<SKILL>_CONFIG`) are honoured when reading `read_only`
+  and `environment`, so a setting in a custom config file is no longer silently ignored.
+
+### Notes
+- Requires `vmware-policy>=1.8.0`; publish that package first.
+- `vmware-audit policy` reports which rules are in force and where they came from —
+  including the case where your rules file exists but failed to parse, which previously
+  looked identical to "policy is working".
+
+### Fixed — pre-release review (2026-07-19)
+
+- **`ako_config_diff` did not preview what `ako_config_upgrade` applies.** The upgrade
+  ran with `--reuse-values`; the diff did not, so it rendered the chart's defaults and
+  reported every local customisation as a pending change. The two were presented as
+  preview-then-apply while answering different questions. The diff now issues the same
+  command as the upgrade.
+- **Both commands now accept `chart_version`.** An unpinned OCI reference resolves to
+  whatever the registry currently tags latest, so a diff and the upgrade that follows it
+  could target different charts, and the same diff could change between runs with no
+  local edit. Empty keeps the previous behaviour; read the installed version with
+  `ako_version` and pass it to both when the preview needs to bind.
+
 ## v1.7.5 (2026-07-13) — internal lint cleanup + family version alignment
 
 ### Internal

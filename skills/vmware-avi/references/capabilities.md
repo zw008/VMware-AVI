@@ -36,7 +36,7 @@ All 28 MCP tools exposed by `vmware-avi mcp` (v1.5.15+; legacy entry point: `vmw
 |------|--------|-------------|
 | `vmware-avi mcp` (CLI subcommand, stdio) | ✅ Full | ✅ v1.5.15+ default — no PyPI re-resolve, works behind corporate TLS proxies. |
 | `vmware-avi-mcp` (legacy console script, stdio) | ✅ Full | Kept for backward compatibility with pre-1.5.15 configs. |
-| `python -m mcp_server` (stdio, via `__main__.py`) | ✅ Full | Container/Smithery deployments only — not for end-user CLI install. Added v1.5.22. |
+| `python -m mcp_server` (stdio, via `__main__.py`) | ✅ Full | Docker image `CMD` only — not for end-user CLI install, and no longer used by `smithery.yaml` (which now calls the `vmware-avi mcp` entry point). Added v1.5.22. |
 | `uvx --from vmware-avi vmware-avi-mcp` | ⚠ Fallback | Re-resolves PyPI on each launch; fails behind corporate TLS proxies (踩坑 #25). Use `UV_NATIVE_TLS=true` workaround. |
 
 ## Automation Level Reference
@@ -45,9 +45,9 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 | Level | Meaning | Agent autonomy | Examples in this skill |
 |:-:|---|---|---|
-| **L1** | Read-only, raw data | Always auto-run | `vs_list`, `vs_status`, `pool_members`, `pool_status`, `controller_status`, `analytics_metrics` queries, AKO/AMKO inventory |
+| **L1** | Read-only, raw data | Always auto-run | `vs_list`, `vs_status`, `pool_list`, `pool_members`, `se_list`, `se_health`, `vs_analytics` queries, AKO/AMKO inventory (`ako_status`, `ako_clusters`, `ako_amko_status`) |
 | **L2** | Read + analysis / recommendation | Always auto-run | traffic distribution analysis, health score correlation, pool member ratio summaries, analytics-driven anomaly detection |
-| **L3** | Single write — user must approve | Only after explicit confirmation; destructive ops require double-confirm + `--dry-run` | `vs_toggle` (disable), `pool_member_enable`/`disable`, AKO `restart`/`upgrade`, `force_resync`, AMKO operations |
+| **L3** | Single write — user must approve | Only after explicit confirmation; destructive ops require double-confirm + `--dry-run` | `vs_toggle` (disable), `pool_member_enable`/`pool_member_disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force` |
 | **L4** | Multi-step plan / apply workflow | Plan generation auto; apply gated by user approval | *(roadmap — VS deployment plans, blue/green pool member rotations)* |
 | **L5** | Auto-remediation from learned pattern | Pattern library only; requires `risk:low` + `reversible:true` + `repeatable:true` | *(roadmap — candidates: stale pool member drain, AKO controller reconnect)* |
 
@@ -96,7 +96,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | `se_list` | List all Service Engines: name, mgmt IP, operational status, SE group (via `serviceengine-inventory`, config + runtime merged) | *(none)* | Low | No |
 | `se_health` | Check SE health: per-SE operational status + connected-VS counts (placement map from `virtualservice-inventory`) | *(none)* | Low | No |
 
-## AKO Mode — Kubernetes (17 tools)
+## AKO Mode — Kubernetes (15 tools)
 
 ### AKO Pod Ops (4)
 
@@ -112,7 +112,7 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | Tool | Description | Parameters | Risk | Confirm |
 |------|-------------|------------|:----:|:-------:|
 | `ako_config_show` | Show current AKO Helm values (values.yaml snapshot; release auto-discovered via `helm list` — official installs use `--generate-name`) | *(none)* | Low | No |
-| `ako_config_diff` | Show diff between running values and the official Broadcom OCI chart (`oci://projects.packages.broadcom.com/ako/helm-charts/ako`) | *(none)* | Low | No |
+| `ako_config_diff` | Preview the pending Helm change, running the same command `ako_config_upgrade` does (`--reuse-values` included) so the diff describes the actual upgrade rather than the chart's defaults. Chart: `oci://projects.packages.broadcom.com/ako/helm-charts/ako` | `chart_version` (optional — empty resolves to registry latest, which can move between calls) | Low | No |
 | `ako_config_upgrade` | Helm upgrade the discovered AKO release from the official Broadcom OCI chart with `--reuse-values` (defaults to dry-run) | `dry_run` (boolean, default: `true`) | High | Yes |
 
 ### Ingress Diagnostics (3)
@@ -148,13 +148,22 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 
 ## Tool Counts by Risk Level
 
+Each tool is counted exactly once, at its default (worst-case) risk level, so the
+three rows sum to the full tool surface:
+
 | Risk | Count | Tools |
 |------|:-----:|-------|
-| Low | 23 | All read-only tools + `vs_toggle` (enable), `pool_member_enable` |
-| Medium | 4 | `vs_toggle` (disable), `pool_member_disable`, `ako_sync_force`, `pool_member_enable` contextually |
-| High | 3 | `ako_restart`, `ako_config_upgrade` (when `dry_run=false`), `vs_toggle` (disable on critical VS) |
+| Low | 23 | All 22 read-only tools + `pool_member_enable` (a write, but it only restores traffic) |
+| Medium | 3 | `vs_toggle`, `pool_member_disable`, `ako_sync_force` |
+| High | 2 | `ako_restart`, `ako_config_upgrade` |
 
-> Note: `vs_toggle` with `enable=true` is Low risk. With `enable=false` it is Medium risk and requires confirmation. Similarly, `ako_config_upgrade` with `dry_run=true` is Low risk (preview only); with `dry_run=false` it becomes High risk.
+**Total: 23 + 3 + 2 = 28.**
+
+> Note: risk is contextual for two tools, but each is listed only once above, at its
+> higher level. `vs_toggle` with `enable=true` is effectively Low risk; with
+> `enable=false` it is Medium (and High against a critical VS), so it is counted as
+> Medium. `ako_config_upgrade` with `dry_run=true` is Low risk (preview only); with
+> `dry_run=false` it is High, so it is counted as High.
 
 ## Audit Coverage
 

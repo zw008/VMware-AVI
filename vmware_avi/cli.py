@@ -362,28 +362,35 @@ def ako_config_show_cmd() -> None:
 
 
 @ako_app.command("config-diff")
-def ako_config_diff_cmd() -> None:
+def ako_config_diff_cmd(
+    chart_version: str = typer.Option(
+        "", help="Pin the chart version to compare against (default: registry latest)"
+    ),
+) -> None:
     """Show pending Helm changes (diff)."""
     from vmware_avi.ops.ako_config import diff_ako_config
 
-    diff_ako_config()
+    diff_ako_config(chart_version=chart_version)
 
 
 @ako_app.command("config-upgrade")
 def ako_config_upgrade_cmd(
     dry_run: bool = typer.Option(True, help="Preview only (default: true)"),
+    chart_version: str = typer.Option(
+        "", help="Pin the chart version to upgrade to (default: registry latest)"
+    ),
 ) -> None:
     """Helm upgrade AKO (requires confirmation)."""
     from vmware_avi.ops.ako_config import upgrade_ako
 
     if dry_run:
-        upgrade_ako(dry_run)
+        upgrade_ako(dry_run, chart_version=chart_version)
         return
     _run_audited(
-        lambda: upgrade_ako(dry_run),
+        lambda: upgrade_ako(dry_run, chart_version=chart_version),
         operation="ako_config_upgrade",
         resource="ako-helm-release",
-        parameters={"dry_run": False},
+        parameters={"dry_run": False, "chart_version": chart_version or "latest"},
     )
 
 

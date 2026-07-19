@@ -11,6 +11,8 @@ AVI (NSX Advanced Load Balancer) management and AKO Kubernetes operations tool �
 
 > **Dual mode**: Traditional AVI Controller management + AKO K8s operations in one skill.
 >
+> **Read-only mode** (v1.8.0): one env var (`VMWARE_READ_ONLY=true`) strips all 6 write tools from the MCP registry -- ideal for audits, PoCs, and untrusted/local models. See [Read-Only Mode](#read-only-mode).
+>
 > **Companion skills** handle everything else:
 >
 > | Skill | Scope | Install |
@@ -45,6 +47,37 @@ pip install vmware-avi -i https://pypi.tuna.tsinghua.edu.cn/simple
 # Verify installation
 vmware-avi doctor
 ```
+
+---
+
+## Read-Only Mode
+
+Set `VMWARE_READ_ONLY=true` and the MCP server withholds all **6 write tools**
+(`vs_toggle`, `pool_member_enable`, `pool_member_disable`, `ako_restart`,
+`ako_config_upgrade`, `ako_sync_force`) at startup, leaving the 22 read tools.
+The guarantee is structural, not a prompt instruction: withheld tools are removed
+from the registry, so `list_tools()` never offers them and the model cannot call
+what it cannot see. **Off by default.** Fail-closed: if the mode is requested but
+cannot be guaranteed, the server refuses to start rather than running open.
+
+```json
+{
+  "mcpServers": {
+    "vmware-avi": {
+      "command": "vmware-avi",
+      "args": ["mcp"],
+      "env": {
+        "VMWARE_AVI_CONFIG": "~/.vmware-avi/config.yaml",
+        "VMWARE_READ_ONLY": "true"
+      }
+    }
+  }
+}
+```
+
+- **Per-skill override**: `VMWARE_AVI_READ_ONLY` beats the family-wide `VMWARE_READ_ONLY`, so this skill can differ from the rest of the family.
+- **Config alternative**: `read_only: true` in `~/.vmware-avi/config.yaml`. Precedence: per-skill env → family env → config → off.
+- **Startup log**: the server logs `Read-only mode active for vmware-avi — withheld 6 write tool(s): ...` so you can confirm the gate engaged.
 
 ---
 
@@ -457,6 +490,7 @@ Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists
 | Feature | Details |
 |---------|---------|
 | **Double Confirmation** | Destructive ops (VS disable, pool member disable, AKO restart, Helm upgrade, force resync) require 2 sequential confirmations |
+| **Read-Only Mode** | `VMWARE_READ_ONLY=true` removes all 6 write tools from the MCP registry at startup -- structural and fail-closed, see [Read-Only Mode](#read-only-mode) |
 | **Dry-Run Default** | `ako config upgrade` defaults to `--dry-run` mode -- user must explicitly confirm to apply |
 | **Audit Trail** | All operations logged to `~/.vmware/audit.db` via vmware-policy (`@vmware_tool` decorator) |
 | **Password Protection** | `.env` file loading with permission check; never in shell history |
@@ -480,13 +514,14 @@ Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists
 | Skill | Scope | Tools | Install |
 |-------|-------|:-----:|---------|
 | **[vmware-avi](https://github.com/zw008/VMware-AVI)** | AVI load balancer, AKO K8s operations | 28 | `uv tool install vmware-avi` |
-| **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM lifecycle, deployment, guest ops, cluster | 34 | `uv tool install vmware-aiops` |
-| **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | Read-only monitoring, alarms, events | 7 | `uv tool install vmware-monitor` |
+| **[vmware-aiops](https://github.com/zw008/VMware-AIops)** | VM lifecycle, deployment, guest ops, cluster | 49 | `uv tool install vmware-aiops` |
+| **[vmware-monitor](https://github.com/zw008/VMware-Monitor)** | Read-only monitoring, alarms, events | 27 | `uv tool install vmware-monitor` |
 | **[vmware-storage](https://github.com/zw008/VMware-Storage)** | Datastores, iSCSI, vSAN | 11 | `uv tool install vmware-storage` |
 | **[vmware-vks](https://github.com/zw008/VMware-VKS)** | Tanzu Namespaces, TKC cluster lifecycle | 20 | `uv tool install vmware-vks` |
-| **[vmware-nsx](https://github.com/zw008/VMware-NSX)** | NSX segments, gateways, NAT, routing | 32 | `uv tool install vmware-nsx-mgmt` |
-| **[vmware-nsx-security](https://github.com/zw008/VMware-NSX-Security)** | DFW firewall, security groups, IDS/IPS | 20 | `uv tool install vmware-nsx-security` |
-| **[vmware-aria](https://github.com/zw008/VMware-Aria)** | Aria Ops: metrics, alerts, capacity | 27 | `uv tool install vmware-aria` |
+| **[vmware-nsx](https://github.com/zw008/VMware-NSX)** | NSX segments, gateways, NAT, routing | 33 | `uv tool install vmware-nsx-mgmt` |
+| **[vmware-nsx-security](https://github.com/zw008/VMware-NSX-Security)** | DFW firewall, security groups, IDS/IPS | 21 | `uv tool install vmware-nsx-security` |
+| **[vmware-aria](https://github.com/zw008/VMware-Aria)** | Aria Ops: metrics, alerts, capacity | 28 | `uv tool install vmware-aria` |
+| **[vmware-harden](https://github.com/zw008/VMware-Harden)** | Compliance baselines, drift detection | 6 | `uv tool install vmware-harden` |
 
 ---
 

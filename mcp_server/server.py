@@ -5,11 +5,18 @@ Entry point: vmware-avi-mcp (defined in pyproject.toml).
 """
 
 import logging
+import os
+from pathlib import Path
 from io import StringIO
-from typing import Optional
+from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
-from vmware_policy import vmware_tool
+from vmware_policy import (
+    apply_read_only_gate,
+    mtime_cached_loader,
+    set_environment_resolver,
+    vmware_tool,
+)
 
 _log = logging.getLogger("vmware-avi-mcp")
 
@@ -536,14 +543,25 @@ def ako_config_show() -> str:
     }
 )
 @vmware_tool(risk_level="low")
-def ako_config_diff() -> str:
+def ako_config_diff(chart_version: str = "") -> str:
     """[READ] Show pending Helm value changes that haven't been applied yet.
 
-    Use before ako_config_upgrade to review what will change.
+    Use before ako_config_upgrade to review what will change. Runs the same
+    helm command ako_config_upgrade does, --reuse-values included, so the
+    preview describes the actual upgrade rather than the chart's defaults.
+
+    Gotcha: with chart_version empty this resolves whatever the Broadcom
+    registry currently tags latest, so two runs can differ with no local
+    change. Read the installed version with ako_version and pass it to both
+    tools when you need the preview and the apply to target one chart.
+
+    Args:
+        chart_version: Pin the chart version to compare against, e.g. "1.11.1".
+            Empty (default) uses the registry's current latest.
     """
     from vmware_avi.ops.ako_config import diff_ako_config
 
-    return _capture_output(diff_ako_config)
+    return _capture_output(diff_ako_config, chart_version=chart_version)
 
 
 @mcp.tool(
@@ -555,7 +573,9 @@ def ako_config_diff() -> str:
     }
 )
 @vmware_tool(risk_level="medium")
-def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
+def ako_config_upgrade(
+    dry_run: bool = True, confirmed: bool = False, chart_version: str = ""
+) -> str:
     """[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety.
 
     Discovers the AKO Helm release in avi-system automatically (official installs
@@ -571,16 +591,22 @@ def ako_config_upgrade(dry_run: bool = True, confirmed: bool = False) -> str:
         dry_run: Preview changes without applying (default true).
         confirmed: Must be True when dry_run=False to actually apply the upgrade.
             Default False returns a preview-only message. Ignored when dry_run=True.
+        chart_version: Pin the chart version to upgrade to, e.g. "1.11.1". Empty
+            (default) takes the registry's current latest, which can move
+            between an ako_config_diff call and this one.
     """
     from vmware_avi.ops.ako_config import upgrade_ako
 
     if not dry_run and not confirmed:
         return (
             "[preview] Would helm-upgrade the AKO release in avi-system from the "
-            "official Broadcom OCI chart with --reuse-values. "
+            f"official Broadcom OCI chart ({chart_version or 'registry latest'}) "
+            "with --reuse-values. "
             "Re-invoke with confirmed=True to execute, or use dry_run=True to preview."
         )
-    return _capture_output(upgrade_ako, dry_run, skip_prompt=True)
+    return _capture_output(
+        upgrade_ako, dry_run, chart_version=chart_version, skip_prompt=True
+    )
 
 
 @mcp.tool(
@@ -778,6 +804,84 @@ def ako_amko_status() -> str:
     from vmware_avi.ops.ako_multi_cluster import show_amko_status
 
     return _capture_output(show_amko_status)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Read-only gate
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _config_read_only() -> Optional[bool]:
+    """Best-effort read of ``read_only`` from the config file.
+
+    Runs at import time, when no config file need exist yet (tests, ``--help``,
+    smoke checks), so every failure degrades to "not configured" and lets the
+    env vars decide. None and False are equivalent here — config is the last
+    link in the precedence chain — but None keeps 'not configured'
+    distinguishable from 'configured off' in logs and debugging.
+
+    Resolved through the same VMWARE_AVI_CONFIG override the connection layer
+    uses. Reading the default path instead would silently ignore settings in an
+    operator's custom config file — a control that appears configured and does
+    nothing, which is the exact failure this work exists to remove.
+    """
+    try:
+        from vmware_avi.config import load_config
+
+        _cfg_path = os.environ.get("VMWARE_AVI_CONFIG")
+        return load_config(Path(_cfg_path) if _cfg_path else None).read_only
+    except Exception:  # noqa: BLE001 — absent/unreadable config is not an error here
+        return None
+
+
+# Applied once, after every tool module above has registered. In read-only mode
+# the write tools are removed from the registry, so list_tools() never offers
+# them — the guarantee is structural rather than a prompt instruction the model
+# may ignore (VMware-AIops issue #31).
+WITHHELD_WRITE_TOOLS: list[str] = apply_read_only_gate(
+    mcp, "vmware-avi", config_flag=_config_read_only()
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Environment declaration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _load_config(config_path: Optional[Path]) -> Any:
+    """Deferred-import shim for the mtime cache — this module keeps
+    vmware_avi imports inside functions, matching the gate section above."""
+    from vmware_avi.config import load_config
+
+    return load_config(config_path)
+
+
+_cached_config = mtime_cached_loader(
+    "VMWARE_AVI_CONFIG",
+    Path.home() / ".vmware-avi" / "config.yaml",  # mirrors vmware_avi.config.CONFIG_FILE
+    _load_config,
+)
+
+
+def _environment_for(target: Optional[str]) -> str:
+    """Report the environment a controller declares, for policy scoping.
+
+    Policy rules scope by environment ("irreversible work in production needs a
+    second person"), and vmware-policy cannot read this skill's config itself.
+    Registering this lookup is what lets those rules fire at all. Reloaded on
+    config.yaml mtime change so an edit takes effect without restarting the
+    server, and resolved through the same VMWARE_AVI_CONFIG override the
+    connection layer uses so both agree on which file is in force. The config
+    is cached via :func:`vmware_policy.mtime_cached_loader`, so repeated tool
+    calls pay one ``os.stat`` instead of a full YAML parse.
+    """
+    try:
+        return _cached_config().environment_for(target)
+    except Exception:  # noqa: BLE001 — an unreadable config means "undeclared"
+        return ""
+
+
+set_environment_resolver(_environment_for)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,22 +1,22 @@
 ---
 name: vmware-avi
 description: >
-  Use this skill whenever the user mentions load balancing, ingress, virtual services, pool members, AVI, NSX ALB, AKO, or application delivery.
-  Also trigger when the user mentions AKO ingress troubleshooting in a Tanzu/vSphere environment.
-  Do NOT trigger when the user explicitly asks to set up or configure nginx/HAProxy/Traefik from scratch — those are not AVI tasks.
-  Directly handles: virtual service listing and enable/disable, pool member management (drain/enable traffic), SSL certificate expiry checks,
-  analytics and error logs, service engine health, AKO pod troubleshooting, AKO Helm config management, Ingress annotation validation,
-  K8s-to-Controller sync diagnostics, and multi-cluster AKO overview.
-  Always use this skill for any "virtual service", "pool member", "AKO status", "AKO logs", "ingress diagnose", "ssl expiry",
-  "load balancer", "NSX ALB", "AVI controller", "AKO sync", "ingress", or "负载均衡" task.
-  For VM lifecycle use vmware-aiops, for NSX networking use vmware-nsx, for K8s cluster lifecycle (Supervisor/TKC) use vmware-vks.
+  Use this skill whenever the user mentions load balancing, ingress, virtual services, pool members, AVI, NSX ALB, AKO, or application delivery
+  in a VMware/NSX ALB or Tanzu/vSphere Kubernetes context.
+  Directly handles: virtual service listing and enable/disable, pool member drain/enable, SSL certificate expiry checks, analytics and error logs,
+  service engine health, AKO pod troubleshooting, AKO Helm config management, Ingress annotation validation, K8s-to-Controller sync diagnostics,
+  and multi-cluster AKO overview.
+  Always use it for "virtual service", "pool member", "AKO status", "AKO logs", "ingress diagnose", "ssl expiry", "load balancer", "NSX ALB",
+  "AVI controller", "AKO sync", or "负载均衡" tasks.
+  Do NOT use to set up or configure nginx/HAProxy/Traefik from scratch — those are not AVI tasks.
+  For VM lifecycle use vmware-aiops, for NSX networking use vmware-nsx, for Kubernetes cluster lifecycle (Supervisor/TKC) use vmware-vks.
 installer:
   kind: uv
   package: vmware-avi
 argument-hint: "[vs-name, ako command, or describe your task]"
 allowed-tools:
   - Bash
-metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["VMWARE_<CONTROLLER>_PASSWORD","KUBECONFIG"],"bins":["vmware-policy","kubectl"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
+metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["VMWARE_<CONTROLLER>_PASSWORD","KUBECONFIG","VMWARE_READ_ONLY","VMWARE_AVI_READ_ONLY","VMWARE_AUDIT_APPROVED_BY"],"bins":["vmware-policy","kubectl","helm"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
 compatibility: >
   vmware-policy auto-installed as Python dependency (provides @vmware_tool decorator and audit logging). All write operations audited to ~/.vmware/audit.db.
   AVI Controller operations require avisdk and a per-controller password env var in ~/.vmware-avi/.env following the pattern <CONTROLLER_NAME_UPPER>_PASSWORD (e.g., controller "prod-avi" → PROD_AVI_PASSWORD).
@@ -35,18 +35,20 @@ AVI (NSX Advanced Load Balancer) application delivery and AKO Kubernetes operati
 
 ## What This Skill Does
 
-| Category | Tools | Count |
-|----------|-------|:-----:|
-| **Virtual Service** | list, status, enable/disable | 3 |
-| **Pool Member** | pool discovery, member list, enable/disable member (drain/restore traffic) | 4 |
-| **SSL Certificate** | list, expiry check | 2 |
-| **Analytics** | VS metrics overview, request error logs | 2 |
-| **Service Engine** | list, health check | 2 |
-| **AKO Pod Ops** | status, logs, restart, version info | 4 |
-| **AKO Config** | values.yaml view, Helm diff, Helm upgrade | 3 |
-| **Ingress Diagnostics** | annotation validation, VS mapping, error diagnosis, fix recommendation | 4 |
-| **Sync Diagnostics** | K8s-Controller comparison, inconsistency list, force resync | 3 |
-| **Multi-cluster** | cluster list, cross-cluster AKO overview, AMKO status | 3 |
+| Category | Tools | Count | Read or Write |
+|----------|-------|:-----:|:-------------:|
+| **Virtual Service** | list, status, enable/disable | 3 | 2R / 1W |
+| **Pool Member** | pool discovery, member list, enable/disable member (drain/restore traffic) | 4 | 2R / 2W |
+| **SSL Certificate** | list, expiry check | 2 | 2R |
+| **Analytics** | VS metrics overview, request error logs | 2 | 2R |
+| **Service Engine** | list, health check | 2 | 2R |
+| **AKO Pod Ops** | status, logs, restart, version info | 4 | 3R / 1W |
+| **AKO Config** | values.yaml view, Helm diff, Helm upgrade | 3 | 2R / 1W |
+| **Ingress Diagnostics** | annotation validation, VS mapping, error diagnosis (with fix recommendations) | 3 | 3R |
+| **Sync Diagnostics** | K8s-Controller comparison, inconsistency list, force resync | 3 | 2R / 1W |
+| **Multi-cluster** | cross-cluster AKO cluster list, AMKO status | 2 | 2R |
+
+**Total**: 28 tools (22 read + 6 write)
 
 ## Quick Install
 
@@ -227,6 +229,9 @@ Health monitor may still be failing. Check the actual health status on the Contr
 ### SSL expiry check shows 0 certificates
 Verify the controller connection has tenant-level access. Certificates are tenant-scoped in AVI — the configured user may only see certs in their tenant.
 
+### Warning: "ran against a target that declares no environment"
+Policy rules scope by environment, and a controller that declares none is treated as unknown rather than safe. Today the write still runs and logs this warning; **the next major release will refuse it**. Add `environment: production` (or `staging` / `lab`) to that controller's entry in `~/.vmware-avi/config.yaml` now, and the enforcing release is a no-op for you. Read-only operations are never affected. Run `vmware-audit policy` to see the rules in force.
+
 ### AKO sync force has no effect
 Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists, the issue is likely in the K8s resource definition itself (bad annotation, missing secret). Use `vmware-avi ako ingress diagnose` to pinpoint the root cause.
 
@@ -251,6 +256,7 @@ vmware-avi doctor            # verify Controller + K8s connectivity
 All operations are automatically audited via vmware-policy (`@vmware_tool` decorator):
 - Every tool call logged to `~/.vmware/audit.db` (SQLite, framework-agnostic)
 - Policy rules enforced via `~/.vmware/rules.yaml` (deny rules, maintenance windows, risk levels)
+- Each controller should declare `environment:` in `config.yaml` (`production` / `staging` / `lab`). Policy rules scope by environment, so a controller that declares none is treated as unknown: writes against it currently run but log a warning, and **the next major release will refuse them**. Reads are never affected
 - Destructive operations (`vs_toggle` disable, `pool_member_disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`) require double confirmation
 - `ako_config_upgrade` defaults to `--dry-run` mode — user must explicitly confirm to apply
 - View recent operations: `vmware-audit log --last 20`

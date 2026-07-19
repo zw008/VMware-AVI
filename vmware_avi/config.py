@@ -129,6 +129,15 @@ class ControllerConfig:
     tenant: str = "admin"
     port: int = 443
     verify_ssl: bool = True
+    environment: str = ""
+    """Which environment this controller is, e.g. production / staging / lab.
+
+    Policy rules scope by environment, so a target that declares none matches
+    none of them — it is treated as unknown, not as safe. The shipped baseline
+    currently warns when a state-changing operation runs against such a target;
+    the next major release refuses it. Read-only operations are never affected.
+    See :mod:`vmware_policy.environment`.
+    """
 
     @property
     def password(self) -> str:
@@ -155,6 +164,12 @@ class AppConfig:
     controllers: tuple[ControllerConfig, ...] = ()
     default_controller: str = ""
     ako: AkoConfig = field(default_factory=AkoConfig)
+    read_only: bool = False
+    """Withhold every write tool from the MCP registry.
+
+    Env vars ``VMWARE_AVI_READ_ONLY`` / ``VMWARE_READ_ONLY`` override this.
+    See :mod:`vmware_policy.readonly`.
+    """
 
     def get_controller(self, name: str) -> ControllerConfig:
         for c in self.controllers:
@@ -162,6 +177,20 @@ class AppConfig:
                 return c
         available = ", ".join(c.name for c in self.controllers)
         raise KeyError(f"Controller '{name}' not found. Available: {available}")
+
+    def environment_for(self, name: str | None) -> str:
+        """Return the environment declared by ``name``, or by the default controller.
+
+        An empty name means "the caller omitted --controller", which resolves to
+        ``default_controller`` — the same controller the connection layer would
+        use, so policy and connection never disagree about which host is in
+        play. Returns "" when the controller is unknown or declares nothing.
+        """
+        try:
+            controller = self.get_controller(name) if name else self.active_controller
+        except (KeyError, ValueError):
+            return ""
+        return controller.environment
 
     @property
     def active_controller(self) -> ControllerConfig:
@@ -192,6 +221,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
             tenant=c.get("tenant", "admin"),
             port=c.get("port", 443),
             verify_ssl=c.get("verify_ssl", True),
+            environment=str(c.get("environment", "") or "").strip(),
         )
         for c in raw.get("controllers", [])
     )
@@ -207,4 +237,5 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         controllers=controllers,
         default_controller=raw.get("default_controller", ""),
         ako=ako,
+        read_only=bool(raw.get("read_only", False)),
     )
