@@ -11,7 +11,7 @@ import asyncio
 
 import pytest
 
-from mcp_server.server import mcp
+from vmware_avi.mcp_server.server import mcp
 
 TOOLS = asyncio.run(mcp.list_tools())
 
@@ -131,10 +131,10 @@ class TestSkillMdParity:
     def test_server_docstring_count_matches(self) -> None:
         import re
 
-        import mcp_server.server as srv
+        import vmware_avi.mcp_server.server as srv
 
         m = re.search(r"Exposes (\d+) tools", srv.__doc__ or "")
-        assert m, "mcp_server.server docstring must state tool count"
+        assert m, "vmware_avi.mcp_server.server docstring must state tool count"
         assert int(m.group(1)) == len(TOOLS)
 
     def test_ako_logs_has_context_param(self) -> None:

@@ -66,7 +66,7 @@ class TestL7LatencyMetricId:
     def test_invented_metric_id_absent_from_source(self) -> None:
         offenders = [
             str(p.relative_to(REPO_ROOT))
-            for d in ("vmware_avi", "mcp_server")
+            for d in ("vmware_avi",)
             for p in (REPO_ROOT / d).rglob("*.py")
             if "__pycache__" not in p.parts and "avg_resp_latency" in p.read_text()
         ]
@@ -462,7 +462,7 @@ class TestAkoStatefulSetWording:
     def test_deployment_wording_absent_from_source(self) -> None:
         offenders = [
             str(p.relative_to(REPO_ROOT))
-            for d in ("vmware_avi", "mcp_server")
+            for d in ("vmware_avi",)
             for p in (REPO_ROOT / d).rglob("*.py")
             if "__pycache__" not in p.parts
             and "Deployment will recreate" in p.read_text()

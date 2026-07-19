@@ -22,7 +22,7 @@ console = Console()
 def _config_read_only() -> bool | None:
     """Best-effort read of ``read_only`` from the config file.
 
-    Deliberately a copy of the helper in ``mcp_server.server`` rather than an
+    Deliberately a copy of the helper in ``vmware_avi.mcp_server.server`` rather than an
     import of it: importing that module registers every tool and applies the
     gate as a side effect. The two must be kept in step -- including the
     ``VMWARE_AVI_CONFIG`` override, without which an operator's custom config

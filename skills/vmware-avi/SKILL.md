@@ -163,7 +163,7 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 
 ## Read-Only Mode
 
-If a write tool listed above (`vs_toggle`, `pool_member_enable`/`disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`) is absent from `list_tools()`, this deployment is in read-only mode: `VMWARE_READ_ONLY=true` (or `VMWARE_AVI_READ_ONLY`, or `read_only: true` in config.yaml) withholds all 6 write tools at start-up. That is a deliberate lockdown, not a fault — do not retry, and do not look for another tool that achieves the same change. Name the operation that is blocked and say an operator must clear the switch and restart the server. Read tools are unaffected; `vmware-avi doctor` reports the current state and its source.
+If a write tool listed above (`vs_toggle`, `pool_member_enable`/`disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`) is absent from `list_tools()`, this deployment is in read-only mode: `VMWARE_READ_ONLY=true` (or `VMWARE_AVI_READ_ONLY`, or `read_only: true` in config.yaml) withholds all 6 write tools at start-up. That is a deliberate lockdown, not a fault — do not retry, and do not look for another tool that achieves the same change. Name the operation that is blocked and say an operator must clear the switch and restart the server. Read tools are unaffected; `vmware-avi doctor` reports the current state and its source. Running with local or small models? See [`references/agent-guardrails.md`](references/agent-guardrails.md).
 
 ## CLI Quick Reference
 

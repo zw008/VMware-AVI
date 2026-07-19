@@ -49,9 +49,9 @@ def declared(request: pytest.FixtureRequest):
     ``request.param`` is what the controller declares — "" for an unlabelled
     controller.
     """
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
-    with patch("mcp_server.server._cached_config", return_value=_config(request.param)):
+    with patch("vmware_avi.mcp_server.server._cached_config", return_value=_config(request.param)):
         set_environment_resolver(server._environment_for)
         yield
     set_environment_resolver(None)
@@ -87,7 +87,7 @@ def enforcing(tmp_path):
 @pytest.mark.parametrize("declared", [""], indirect=True)
 def test_undeclared_write_runs_and_warns_under_baseline(declared, baseline) -> None:
     """Nothing breaks for operators who have not labelled their estate yet."""
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
     with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
         server.ako_config_upgrade(dry_run=False, confirmed=True)
@@ -110,7 +110,7 @@ def test_undeclared_write_runs_and_warns_under_baseline(declared, baseline) -> N
 @pytest.mark.unit
 @pytest.mark.parametrize("declared", [""], indirect=True)
 def test_undeclared_write_is_denied_when_enforcing(declared, enforcing) -> None:
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
     with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
         with pytest.raises(PolicyDenied) as excinfo:
@@ -125,7 +125,7 @@ def test_undeclared_write_is_denied_when_enforcing(declared, enforcing) -> None:
 @pytest.mark.parametrize("declared", [""], indirect=True)
 def test_denial_names_the_config_key(declared, enforcing) -> None:
     """An operator has to be able to act on the refusal without reading code."""
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
     with patch("vmware_avi.ops.ako_config.upgrade_ako"):
         with pytest.raises(PolicyDenied) as excinfo:
@@ -140,7 +140,7 @@ def test_denial_names_the_config_key(declared, enforcing) -> None:
 @pytest.mark.parametrize("declared", ["lab"], indirect=True)
 def test_declared_controller_allows_writes_when_enforcing(declared, enforcing) -> None:
     """Declaring the environment is all it takes to be unblocked."""
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
     with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
         server.ako_config_upgrade(dry_run=False, confirmed=True)
@@ -159,7 +159,7 @@ def test_declared_controller_allows_writes_when_enforcing(declared, enforcing) -
 def test_reads_are_never_gated(declared, mode, request) -> None:
     """Inspection must keep working on an estate nobody has labelled yet."""
     request.getfixturevalue(mode)
-    from mcp_server import server
+    from vmware_avi.mcp_server import server
 
     with patch("vmware_avi.ops.ako_config.show_ako_config") as mock_show:
         server.ako_config_show()
@@ -185,7 +185,7 @@ class TestResolverIsRegisteredAtImport:
         import importlib
 
         import vmware_policy.environment as env_mod
-        from mcp_server import server
+        from vmware_avi.mcp_server import server
 
         set_environment_resolver(None)
         try:
@@ -238,7 +238,7 @@ class TestConfigParsesTheDeclaration:
 
     def test_unreadable_config_reads_as_undeclared(self) -> None:
         """A broken config must fail closed, not raise into the tool call."""
-        from mcp_server import server
+        from vmware_avi.mcp_server import server
 
         with patch(
             "vmware_avi.config.load_config", side_effect=FileNotFoundError("no config")

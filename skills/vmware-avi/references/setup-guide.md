@@ -40,7 +40,7 @@ For platforms that prefer containerized MCP servers (e.g., Smithery registry, Ku
 
 #### Docker
 
-Build and run the MCP server in a container. The image uses `python:3.12-slim` with `uv` for dependency installation and runs `python -m mcp_server` on stdio (no port exposed — MCP uses stdin/stdout).
+Build and run the MCP server in a container. The image uses `python:3.12-slim` with `uv` for dependency installation and runs `python -m vmware_avi.mcp_server` on stdio (no port exposed — MCP uses stdin/stdout).
 
 ```bash
 git clone https://github.com/zw008/VMware-AVI.git
@@ -56,7 +56,7 @@ docker run -i --rm \
   vmware-avi-mcp
 ```
 
-The container's `CMD` is `python -m mcp_server`, which is wired through `mcp_server/__main__.py` to the same FastMCP entry point as the CLI subcommand. All 28 tools are available.
+The container's `CMD` is `python -m vmware_avi.mcp_server`, which is wired through `vmware_avi/mcp_server/__main__.py` to the same FastMCP entry point as the CLI subcommand. All 28 tools are available.
 
 #### Smithery
 
@@ -404,7 +404,7 @@ echo 'PROD_AVI_PASSWORD=yourpassword' >> ~/.vmware-avi/.env
 2. Confirm the `mcp` subcommand: `vmware-avi mcp --help` (v1.5.15+)
 3. Check that `~/.vmware-avi/config.yaml` exists (MCP server loads config on startup)
 4. Legacy: `which vmware-avi-mcp` and `vmware-avi-mcp --help` still work
-5. Never use `python -m mcp_server` — always use `vmware-avi mcp` (v1.5.15+) or the legacy `vmware-avi-mcp` entry point
+5. Never use `python -m vmware_avi.mcp_server` — always use `vmware-avi mcp` (v1.5.15+) or the legacy `vmware-avi-mcp` entry point
 
 ### `invalid peer certificate: UnknownIssuer` (uvx)
 

@@ -254,7 +254,7 @@ class TestWriteFailureReported:
 @pytest.mark.unit
 class TestMcpUpgradeGate:
     def test_not_confirmed_returns_preview_without_running(self) -> None:
-        from mcp_server import server
+        from vmware_avi.mcp_server import server
 
         with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
             out = server.ako_config_upgrade(dry_run=False, confirmed=False)
@@ -264,7 +264,7 @@ class TestMcpUpgradeGate:
         assert "confirmed=True" in out
 
     def test_confirmed_runs_with_skip_prompt(self) -> None:
-        from mcp_server import server
+        from vmware_avi.mcp_server import server
 
         with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
             server.ako_config_upgrade(dry_run=False, confirmed=True)
@@ -273,7 +273,7 @@ class TestMcpUpgradeGate:
         assert mock_upgrade.call_args.kwargs.get("skip_prompt") is True
 
     def test_dry_run_needs_no_confirmation(self) -> None:
-        from mcp_server import server
+        from vmware_avi.mcp_server import server
 
         with patch("vmware_avi.ops.ako_config.upgrade_ako") as mock_upgrade:
             server.ako_config_upgrade(dry_run=True, confirmed=False)
