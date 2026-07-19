@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import os
 import shutil
 from pathlib import Path
 
@@ -16,6 +17,47 @@ from vmware_avi.config import CONFIG_DIR, CONFIG_FILE, ENV_FILE, load_config
 
 _log = logging.getLogger("vmware-avi.doctor")
 console = Console()
+
+
+def _config_read_only() -> bool | None:
+    """Best-effort read of ``read_only`` from the config file.
+
+    Deliberately a copy of the helper in ``mcp_server.server`` rather than an
+    import of it: importing that module registers every tool and applies the
+    gate as a side effect. The two must be kept in step -- including the
+    ``VMWARE_AVI_CONFIG`` override, without which an operator's custom config
+    file would be silently ignored here while the gate honoured it, and the
+    doctor would confidently report the wrong answer.
+    """
+    try:
+        _cfg_path = os.environ.get("VMWARE_AVI_CONFIG")
+        return load_config(Path(_cfg_path) if _cfg_path else None).read_only
+    except Exception:  # noqa: BLE001 — absent/unreadable config is not an error here
+        return None
+
+
+def _check_read_only() -> tuple[bool, str]:
+    """Report the resolved read-only state and where it came from.
+
+    Never fails -- read-only being on is a posture, not a fault. It is here
+    because an operator who set the switch had no way to confirm it took: the
+    only signal was a line in the MCP server's start-up log.
+    """
+    from vmware_policy.readonly import read_only_status
+
+    status = read_only_status("vmware-avi", _config_read_only())
+    if not status.recognised:
+        return True, (
+            f"{status.source}={status.raw!r} is not a recognised value. It resolves "
+            f"to ON (fail-closed), so every write tool is withheld — probably not "
+            f"what was intended. Use true or false."
+        )
+    if status.enabled:
+        return True, (
+            f"ON (from {status.source}) — write tools are withheld from the MCP "
+            f"registry. Clear that switch and restart the server to expose them."
+        )
+    return True, f"off (from {status.source}) — write tools are exposed"
 
 
 def _check(label: str, ok: bool, detail: str = "") -> bool:
@@ -148,6 +190,9 @@ def run_doctor() -> bool:
         results.append(_check("vmware-policy installed", True))
     except ImportError:
         results.append(_check("vmware-policy installed", False, "pip install vmware-policy"))
+
+    # 11. Read-only mode (reported, never failed — it is a posture, not a fault)
+    results.append(_check("Read-only mode", *_check_read_only()))
 
     passed = sum(results)
     total = len(results)
