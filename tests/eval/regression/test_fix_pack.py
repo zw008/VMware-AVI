@@ -31,7 +31,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vmware_avi.config import AkoConfig, AppConfig, ControllerConfig
+from vmware_avi.config import AkoConfig, AppConfig, ConfigError, ControllerConfig
 from vmware_avi.connection import (
     AviApiError,
     AviConnectionManager,
@@ -139,7 +139,9 @@ class TestApiErrorTranslation:
 
     def test_400_not_retried(self) -> None:
         session = MagicMock()
-        session.put.return_value = _FakeResp(400, "bad payload")
+        session.put.return_value = _FakeResp(
+            400, "bad payload", payload={"error": "Invalid value for field 'servers'"},
+        )
 
         with patch("vmware_avi.connection.time.sleep") as mock_sleep:
             with pytest.raises(AviApiError) as exc_info:
@@ -148,7 +150,11 @@ class TestApiErrorTranslation:
         assert session.put.call_count == 1
         mock_sleep.assert_not_called()
         assert exc_info.value.status_code == 400
-        assert "bad payload" in str(exc_info.value)
+        # The Controller's own `error` field is forwarded; the raw body is not.
+        # AviApiError is on _safe_error's passthrough list, so this message
+        # reaches the agent verbatim and a body is not ours to vouch for.
+        assert "Invalid value for field 'servers'" in str(exc_info.value)
+        assert "bad payload" not in str(exc_info.value)
 
     def test_503_on_put_not_retried(self) -> None:
         """踩坑 #37: transient-5xx retry must be GET-only — re-sending a
@@ -206,6 +212,60 @@ class TestApiErrorTranslation:
         msg = str(exc_info.value)
         assert "unreachable" in msg
         assert "vmware-avi doctor" in msg
+
+    def test_avisdk_connection_failure_reaches_the_teaching_error(
+        self, sample_config: AppConfig,
+    ) -> None:
+        """The catch named the builtin ``ConnectionError``; avisdk never raises it.
+
+        avisdk reaches the Controller through ``requests``, whose
+        ``ConnectionError`` is a ``RequestException`` → ``OSError`` and is not a
+        builtin ``ConnectionError`` at all. So the teaching message had never
+        fired against a real Controller, and the test above passed only because
+        it raised the builtin type by hand — the defect could not appear in the
+        environment that was checking for it.
+        """
+        import requests
+
+        mgr = AviConnectionManager(sample_config)
+        raw = requests.exceptions.SSLError(
+            "HTTPSConnectionPool(host='avi.internal', port=443): Max retries exceeded "
+            "with url: /login (Caused by SSLCertVerificationError(1, \"hostname "
+            "'avi.internal' doesn't match 'CN=avi.corp.example'\"))"
+        )
+        with patch.object(AviConnectionManager, "_create_session", side_effect=raw):
+            with pytest.raises(AviApiError) as exc_info:
+                mgr.connect()
+
+        msg = str(exc_info.value)
+        assert "unreachable" in msg
+        assert "verify_ssl: false" in msg  # the self-signed-certificate remedy
+        assert sample_config.controllers[0].name in msg
+        # None of what the raw error carries: this message passes through
+        # _safe_error verbatim, and sanitize truncates without redacting.
+        assert "avi.internal" not in msg
+        assert "avi.corp.example" not in msg
+        assert "Max retries" not in msg
+
+    def test_missing_password_is_not_reported_as_unreachable(
+        self, sample_config: AppConfig,
+    ) -> None:
+        """``ConfigError`` subclasses ``OSError``, so widening this catch to the
+        base class would swallow the family's most common first-run failure and
+        replace its remedy — the env var name — with 'Controller unreachable'."""
+        mgr = AviConnectionManager(sample_config)
+        with patch.object(
+            AviConnectionManager,
+            "_create_session",
+            side_effect=ConfigError(
+                "Password not found. Add it to ~/.vmware-avi/.env (chmod 600), or "
+                "export the environment variable LAB_PASSWORD"
+            ),
+        ):
+            with pytest.raises(ConfigError) as exc_info:
+                mgr.connect()
+
+        assert "LAB_PASSWORD" in str(exc_info.value)
 
 
 # ── Fix 2 — write failures must not print success ──────────────────────────

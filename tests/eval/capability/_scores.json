@@ -1,5 +1,5 @@
 {
-  "_comment": "Capability eval scores. Regenerate with: pytest -m capability. These are tracked trends, not pass/fail gates \u2014 see _scoring.py.",
+  "_comment": "Capability eval scores. Regenerate with: pytest -m capability. These are tracked trends, not pass/fail gates \u2014 see _scoring.py. Entries marked stale=true were carried over from an earlier run because this run did not measure them.",
   "scores": {
     "entity_reachability_full": {
       "detail": {
@@ -80,9 +80,7 @@
     },
     "error_actionability": {
       "detail": {
-        "composed_hint_sites": [
-          "connection.py:99"
-        ],
+        "composed_hint_sites": [],
         "dead_end_count": 0,
         "dead_end_errors": [],
         "per_dimension_pct": {
@@ -90,12 +88,12 @@
           "names_input": 100.0,
           "states_remedy": 100.0
         },
-        "raise_sites": 10
+        "raise_sites": 9
       },
-      "maximum": 30,
+      "maximum": 27,
       "pct": 100.0,
       "unit": "points",
-      "value": 30
+      "value": 27
     },
     "manifest_context_headroom": {
       "detail": {
@@ -170,17 +168,17 @@
         "over_budget": [],
         "remedy_after_interpolation": []
       },
-      "maximum": 10,
+      "maximum": 9,
       "pct": 100.0,
       "unit": "messages",
-      "value": 10
+      "value": 9
     },
     "teaching_error_rate": {
       "detail": {},
-      "maximum": 10,
+      "maximum": 9,
       "pct": 100.0,
       "unit": "messages",
-      "value": 10
+      "value": 9
     },
     "tool_description_quality": {
       "detail": {
@@ -212,8 +210,8 @@
     "tool_failure_payload_quality": {
       "detail": {
         "bare_string_error_lines": [
-          123,
-          125
+          144,
+          146
         ],
         "carries_hint": 0,
         "dict_shaped": 0,

@@ -120,6 +120,95 @@ def test_unexpected_exception_does_not_leak_raw_text(op):
     assert "hunter2" not in out
 
 
+@pytest.fixture
+def audit_rows(monkeypatch):
+    """Capture what ``@vmware_tool`` writes to the audit log for one call."""
+    rows: list[dict] = []
+
+    class _Recorder:
+        def log(self, **kw):
+            rows.append(kw)
+
+    monkeypatch.setattr("vmware_policy.decorators.get_engine", lambda: _Recorder())
+    return rows
+
+
+def _run_vs_list_with(monkeypatch, body) -> str:
+    """Drive the real ``vs_list`` tool — decorators and all — over ``body``.
+
+    ``vs_list`` imports its ops function inside the tool body, so replacing the
+    attribute on the ops module is what the tool will pick up. Going through the
+    registered tool rather than calling ``_capture_output`` directly is the
+    point: the audited status is produced by the ``@vmware_tool`` wrapper, and a
+    test that skips the wrapper cannot see it.
+
+    ``console`` is bound on *this* module rather than on the ops module because
+    ``_capture_output`` swaps the attribute of the module a function was defined
+    in, and a function's global lookup resolves there too. Pointing the two at
+    different modules makes the body raise ``NameError`` instead of printing —
+    which is itself a failure, so the error-path tests would have passed without
+    ever reaching the code they exist to check.
+    """
+    import sys
+
+    from vmware_avi.ops import vs_mgmt
+
+    monkeypatch.setattr(sys.modules[__name__], "console", Console(), raising=False)
+    monkeypatch.setattr(vs_mgmt, "list_virtual_services", body, raising=True)
+    return srv.vs_list()
+
+
+def test_a_returned_failure_is_audited_as_a_failure(monkeypatch, audit_rows):
+    """A tool that catches and returns must still be recorded as having failed.
+
+    ``@vmware_tool`` marks a call failed when an exception reaches it or when a
+    dict payload carries a truthy ``error`` key. Every tool here returns a
+    *string*, so a caught failure returned normally and was audited ``ok`` — for
+    ``vs_toggle`` and ``ako_restart`` that is an audit row claiming a Virtual
+    Service was disabled when it was not. It also handed vmware-pilot an undo
+    token for a change that never landed and told the circuit breaker the call
+    succeeded, so repeated failures never tripped it.
+    """
+
+    def failing(_controller=None):
+        console.print("[red]Controller unreachable.[/red]")  # noqa: F821
+        raise SystemExit(1)
+
+    out = _run_vs_list_with(monkeypatch, failing)
+
+    assert out.startswith("Error:")
+    assert "Controller unreachable." in out, "the ops body never ran under capture"
+    assert audit_rows, "the tool call was never audited at all"
+    assert audit_rows[0]["status"].startswith("error"), (
+        f"a failed call was audited as {audit_rows[0]['status']!r}"
+    )
+
+
+def test_an_unexpected_exception_is_audited_as_a_failure(monkeypatch, audit_rows):
+    """The other catch path in ``_capture_output`` needs the same declaration."""
+
+    def broken(_controller=None):
+        raise RuntimeError("boom")
+
+    out = _run_vs_list_with(monkeypatch, broken)
+
+    assert out.startswith("Error:")
+    assert audit_rows and audit_rows[0]["status"].startswith("error")
+
+
+def test_a_successful_call_is_still_audited_as_ok(monkeypatch, audit_rows):
+    """The failure signal must not leak into calls that worked."""
+
+    def fine(_controller=None):
+        console.print("web-01  enabled  10.0.0.1")  # noqa: F821
+
+    out = _run_vs_list_with(monkeypatch, fine)
+
+    assert "web-01" in out
+    assert not out.startswith("Error:")
+    assert audit_rows and audit_rows[0]["status"].startswith("ok")
+
+
 def test_console_is_restored_after_a_failure(op):
     """The swap is global to the ops module; leaking it would silently redirect
     every later CLI call in the same process into a dead buffer."""

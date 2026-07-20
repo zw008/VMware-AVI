@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import time
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -38,6 +39,52 @@ class AviApiError(Exception):
         super().__init__(message)
         self.status_code = status_code
         self.path = path
+
+
+@lru_cache(maxsize=1)
+def _connect_failure_types() -> tuple[type[BaseException], ...]:
+    """Exception types a failed ``ApiSession.get_session`` can raise.
+
+    avisdk reaches the Controller through ``requests``, whose ``ConnectionError``
+    is a ``RequestException`` → ``OSError`` and is **not** the builtin
+    ``ConnectionError`` (check ``requests.exceptions.ConnectionError.__mro__``).
+    Catching only the builtin meant the teaching message in ``connect`` had never
+    once fired against a real Controller: refused connections, unresolvable
+    hostnames and rejected self-signed certificates all arrive as the requests
+    type, the last two included because ``SSLError`` and ``ConnectTimeout``
+    subclass it.
+
+    Resolved on first use rather than at import, because ``requests`` costs
+    ~100ms to import and nothing on the CLI path needs it until a connection is
+    actually made. Resolved into a real tuple rather than named inline in the
+    ``except`` clause, so matching an exception cannot itself raise
+    ``AttributeError`` (踩坑 #40).
+    """
+    try:
+        from requests.exceptions import ConnectionError as RequestsConnectionError
+    except ImportError:  # pragma: no cover — requests ships as an avisdk dependency
+        return (ConnectionError,)
+    return (ConnectionError, RequestsConnectionError)
+
+
+def _controller_error(resp) -> str:
+    """Return the Controller's own ``error`` field, or ``""`` if there is none.
+
+    The raw response body is deliberately not read. ``AviApiError`` is on
+    ``_safe_error``'s passthrough list, so whatever lands in its message reaches
+    the agent verbatim, and a body is not ours to vouch for: it can be an HTML
+    error page from a reverse proxy, a traceback, or a request echo carrying the
+    URL. AVI's own JSON error payload is a single short field naming what it
+    rejected, which is the only part worth forwarding.
+    """
+    try:
+        payload = resp.json()
+    except Exception:  # noqa: BLE001 — a non-JSON body simply has no field to read
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    error = payload.get("error")
+    return error.strip()[:120] if isinstance(error, str) else ""
 
 
 def _hint_for_status(status_code: int, path: str) -> str:
@@ -91,14 +138,15 @@ def _api_request(session: ApiSession, method: str, path: str, **kwargs):
             time.sleep(_RETRY_DELAY_SECONDS)
             continue
 
-        body = (getattr(resp, "text", "") or "")[:200]
-        # Hint before body: the agent-facing wrapper truncates at 300 characters
-        # with no ellipsis, and a 200-character response body is enough to push a
-        # trailing remedy past the cut. Losing Controller prose costs nothing;
-        # losing the correction costs the retry.
+        # Hint before detail: the agent-facing wrapper truncates at 300
+        # characters with no ellipsis, so anything the Controller contributes has
+        # to sit where the cut can only eat it. Losing Controller prose costs
+        # nothing; losing the correction costs the retry.
+        detail = _controller_error(resp)
         raise AviApiError(
             f"AVI API {method.upper()} '{path}' failed with HTTP {status}. "
-            f"{_hint_for_status(status, path)} Response: {body or '(empty body)'}",
+            f"{_hint_for_status(status, path)}"
+            + (f" Controller reported: {detail}" if detail else ""),
             status_code=status,
             path=path,
         )
@@ -174,13 +222,21 @@ class AviConnectionManager:
             except Exception:
                 del self._sessions[ctrl.name]
 
+        connect_failures = _connect_failure_types()
         try:
             session = self._create_session(ctrl)
-        except ConnectionError as exc:
+        except connect_failures as exc:
+            # The cause is chained for the server-side log and deliberately not
+            # interpolated: a requests connection error carries the full
+            # scheme://host:port/path and a TLS one quotes the certificate
+            # subject, and this message passes through _safe_error verbatim.
+            # Remedies lead so that an unusually long controller name truncates
+            # itself rather than the advice.
             raise AviApiError(
-                f"AVI Controller '{ctrl.name}' ({ctrl.host}) unreachable. "
-                "Check the controller address and credentials in "
-                f"~/.vmware-avi/config.yaml, then run: vmware-avi doctor. Cause: {exc}",
+                "AVI Controller unreachable. Check its host and port in "
+                "~/.vmware-avi/config.yaml and its credentials in ~/.vmware-avi/.env, "
+                "then run: vmware-avi doctor. If the Controller presents a self-signed "
+                f"certificate, set verify_ssl: false on its entry. Controller: '{ctrl.name}'",
                 path="login",
             ) from exc
         self._sessions[ctrl.name] = session

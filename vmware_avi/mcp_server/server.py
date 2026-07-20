@@ -14,11 +14,13 @@ from mcp.server.fastmcp import FastMCP
 from vmware_policy import (
     apply_read_only_gate,
     mtime_cached_loader,
+    report_tool_failure,
     sanitize,
     set_environment_resolver,
     vmware_tool,
 )
 
+from vmware_avi.config import ConfigError
 from vmware_avi.connection import AviApiError
 
 _log = logging.getLogger("vmware-avi-mcp")
@@ -46,12 +48,18 @@ def _safe_error(exc: Exception, tool: str) -> str:
     genuinely unplanned ones are reduced. The enumeration below is the
     mechanical expression of that rule, and it drifts.
 
-    ``OSError`` is allowed because ``config.py`` raises exactly one — the
-    missing-password error, this family's most common first-run failure, whose
-    entire remedy is the env var name it carries. Its subclasses
-    ``FileNotFoundError``, ``PermissionError``, ``TimeoutError`` and
-    ``ConnectionError`` were already allowed, so admitting the base class
-    widens exposure only to the remaining OS-level subtypes.
+    The one exception ``config.py`` raises is admitted by its own narrow type,
+    ``ConfigError`` — the missing-password error, this family's most common
+    first-run failure, whose entire remedy is the env var name it carries.
+    Admitting its base class ``OSError`` instead, as this list briefly did,
+    admitted every OS-level error along with it, and ``sanitize`` only strips
+    control characters and truncates — it redacts nothing. So
+    ``ssl.SSLCertVerificationError`` (certificate subject and hostname),
+    ``socket.gaierror`` (the hostname that failed to resolve) and
+    ``requests.exceptions.ConnectionError`` (the full scheme://host:port/path)
+    all reached the agent verbatim; each is an ``OSError`` subclass. The
+    narrower ``FileNotFoundError``, ``PermissionError``, ``TimeoutError`` and
+    ``ConnectionError`` stay, having been allowed all along.
 
     Anything else is reduced to its type, because an unplanned exception's text
     was written for a developer reading a traceback, not for an agent deciding
@@ -65,7 +73,7 @@ def _safe_error(exc: Exception, tool: str) -> str:
         PermissionError,
         TimeoutError,
         ConnectionError,
-        OSError,
+        ConfigError,
         AviApiError,
     )
     if isinstance(exc, _passthrough):
@@ -85,12 +93,23 @@ def _as_error(captured: str, detail: str = "") -> str:
     ``_DOCTOR_HINT`` is appended only when the captured text names nothing to
     act on. When the ops message already says which tool to run, repeating a
     generic "run doctor" would bury the specific advice under worse advice.
+
+    Declaring the failure to ``@vmware_tool`` happens here rather than at the two
+    catch sites, because this is the one function both of them render through and
+    a renderer cannot be reached on a success path. Every tool in this skill
+    returns a *string*, and the decorator only notices a failure that raises or a
+    dict carrying a truthy ``error`` key — so a caught failure returned normally
+    was audited ``status=ok``. For ``vs_toggle`` and ``ako_restart`` that is a row
+    claiming a Virtual Service was disabled when it was not; it also handed
+    vmware-pilot an undo token for a change that never landed and told the
+    circuit breaker the call succeeded, so repeated failures never tripped it.
     """
     body = " ".join((captured or "").split()) or detail
     if detail and detail not in body:
         body = f"{body} {detail}".strip()
     if "vmware-avi" not in body:
         body = f"{body} {_DOCTOR_HINT}".strip()
+    report_tool_failure(body)
     return f"Error: {body}"
 
 
@@ -98,7 +117,9 @@ def _capture_output(func, *args, **kwargs) -> str:
     """Run a function and capture its Rich console output as plain text.
 
     Failures come back as an ``Error: ...`` payload rather than as the text the
-    function happened to print before dying.
+    function happened to print before dying. Both catch paths render through
+    ``_as_error``, which also declares the failure to ``@vmware_tool`` — see
+    there for why a returned failure has to say so out loud.
     """
     import sys
 

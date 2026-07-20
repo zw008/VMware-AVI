@@ -118,6 +118,16 @@ def _check_env_permissions() -> None:
 _check_env_permissions()
 
 
+class ConfigError(OSError):
+    """A configuration problem the operator can fix, safe to show an agent.
+
+    Subclasses ``OSError`` so the CLI paths that already catch ``OSError`` keep
+    working. The point of the narrow type is the MCP path: ``_safe_error``
+    passes this through verbatim, and passing through bare ``OSError`` also
+    passed through TLS, DNS and socket errors carrying hostnames and URLs.
+    """
+
+
 @dataclass(frozen=True)
 class ControllerConfig:
     """An AVI Controller connection target."""
@@ -161,7 +171,7 @@ class ControllerConfig:
         env_key = f"{self.name.upper().replace('-', '_')}_PASSWORD"
         pw = os.environ.get(env_key, "")
         if not pw:
-            raise OSError(
+            raise ConfigError(
                 "Password not found. Add it to ~/.vmware-avi/.env (chmod 600), or "
                 f"export the environment variable {env_key}"
             )
