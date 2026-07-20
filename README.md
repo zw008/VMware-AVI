@@ -160,16 +160,16 @@ Create `~/.vmware-avi/.env`:
 
 ```bash
 # AVI Controller passwords
-# Format: VMWARE_AVI_{CONTROLLER_NAME_UPPER}_PASSWORD
-VMWARE_AVI_PROD_AVI_PASSWORD=your-password-here
+# Format: {CONTROLLER_NAME_UPPER}_PASSWORD
+PROD_AVI_PASSWORD=your-password-here
 ```
 
 Password environment variable naming convention:
 ```
-VMWARE_AVI_{CONTROLLER_NAME_UPPER}_PASSWORD
+{CONTROLLER_NAME_UPPER}_PASSWORD
 # Replace hyphens with underscores, UPPERCASE
-# Example: controller "prod-avi" -> VMWARE_AVI_PROD_AVI_PASSWORD
-# Example: controller "staging-alb" -> VMWARE_AVI_STAGING_ALB_PASSWORD
+# Example: controller "prod-avi" -> PROD_AVI_PASSWORD
+# Example: controller "staging-alb" -> STAGING_ALB_PASSWORD
 ```
 
 ### Step 4: Verify

@@ -5,6 +5,11 @@ controllers:
   - name: prod-avi
     host: avi-controller.example.com
     username: admin
+    # Set password via env: export PROD_AVI_PASSWORD=xxx
+    # The username above can also come from the environment:
+    #   export PROD_AVI_USERNAME=svc-account
+    # Set both when a secret store supplies the pair — they resolve together,
+    # so rotating one without the other cannot happen.
     api_version: "22.1.4"
     tenant: admin
     port: 443

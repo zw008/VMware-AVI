@@ -160,15 +160,15 @@ ako:
 ```bash
 # AVI Controller 密码
 # 格式：VMWARE_AVI_{控制器名大写}_PASSWORD
-VMWARE_AVI_PROD_AVI_PASSWORD=your-password-here
+PROD_AVI_PASSWORD=your-password-here
 ```
 
 密码环境变量命名规则：
 ```
 VMWARE_AVI_{控制器名大写}_PASSWORD
 # 连字符替换为下划线，全部大写
-# 示例：控制器 "prod-avi" -> VMWARE_AVI_PROD_AVI_PASSWORD
-# 示例：控制器 "staging-alb" -> VMWARE_AVI_STAGING_ALB_PASSWORD
+# 示例：控制器 "prod-avi" -> PROD_AVI_PASSWORD
+# 示例：控制器 "staging-alb" -> STAGING_ALB_PASSWORD
 ```
 
 ### 第 4 步：验证

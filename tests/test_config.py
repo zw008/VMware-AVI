@@ -75,6 +75,55 @@ class TestControllerPassword:
 
 
 @pytest.mark.unit
+class TestControllerUsername:
+    """Username resolution from env vars, mirroring the password."""
+
+    @staticmethod
+    def _config_with_username(tmp_path: Path) -> Path:
+        cfg = tmp_path / "config.yaml"
+        cfg.write_text(
+            "controllers:\n"
+            "  - name: lab\n"
+            "    host: 10.0.0.1\n"
+            "    username: config-file-user\n"
+            "default_controller: lab\n"
+        )
+        return cfg
+
+    def test_username_and_password_rotate_together(self, tmp_path: Path) -> None:
+        """Both halves of a credential must resolve at the same moment.
+
+        The env override exists so a secret store can supply the pair. Reading
+        the username once at load time while the password stays a property
+        splits it: a sidecar rotating both mid-process moves the password and
+        leaves the username behind, and the login uses a combination that was
+        never issued together. That is the failure this override was added to
+        prevent, so it must not be reintroduced by the fix for it.
+        """
+        ctrl = load_config(self._config_with_username(tmp_path)).controllers[0]
+
+        with patch.dict(os.environ, {"LAB_USERNAME": "svc-a", "LAB_PASSWORD": "pw-a"}):
+            assert (ctrl.username, ctrl.password) == ("svc-a", "pw-a")
+
+        with patch.dict(os.environ, {"LAB_USERNAME": "svc-b", "LAB_PASSWORD": "pw-b"}):
+            assert (ctrl.username, ctrl.password) == ("svc-b", "pw-b"), (
+                "the pair came apart — one half is bound at load time and the "
+                "other at access"
+            )
+
+    def test_username_falls_back_to_config_file(self, tmp_path: Path) -> None:
+        ctrl = load_config(self._config_with_username(tmp_path)).controllers[0]
+        with patch.dict(os.environ, {}, clear=True):
+            assert ctrl.config_username == "config-file-user"
+            assert ctrl.username == "config-file-user"
+
+    def test_username_env_key_normalisation(self) -> None:
+        ctrl = ControllerConfig(name="prod-dc1", host="10.0.0.2")
+        with patch.dict(os.environ, {"PROD_DC1_USERNAME": "svc-prod"}):
+            assert ctrl.username == "svc-prod"
+
+
+@pytest.mark.unit
 class TestEnvPermissions:
     """Warn when .env has open permissions."""
 

@@ -21,7 +21,7 @@ from vmware_avi.config import AkoConfig, AppConfig, ControllerConfig
 
 @pytest.fixture()
 def sample_controller() -> ControllerConfig:
-    return ControllerConfig(name="lab", host="10.0.0.1", username="admin")
+    return ControllerConfig(name="lab", host="10.0.0.1", config_username="admin")
 
 
 @pytest.fixture()

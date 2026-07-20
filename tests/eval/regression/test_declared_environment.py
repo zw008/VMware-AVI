@@ -34,7 +34,7 @@ def _config(environment: str) -> AppConfig:
     return AppConfig(
         controllers=(
             ControllerConfig(
-                name="lab", host="10.0.0.1", username="admin", environment=environment
+                name="lab", host="10.0.0.1", config_username="admin", environment=environment
             ),
         ),
         default_controller="lab",

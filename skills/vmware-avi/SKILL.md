@@ -16,7 +16,7 @@ installer:
 argument-hint: "[vs-name, ako command, or describe your task]"
 allowed-tools:
   - Bash
-metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["VMWARE_<CONTROLLER>_PASSWORD","KUBECONFIG","VMWARE_READ_ONLY","VMWARE_AVI_READ_ONLY","VMWARE_AUDIT_APPROVED_BY"],"bins":["vmware-policy","kubectl","helm"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
+metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["<CONTROLLER>_PASSWORD","<CONTROLLER>_USERNAME","KUBECONFIG","VMWARE_READ_ONLY","VMWARE_AVI_READ_ONLY","VMWARE_AUDIT_APPROVED_BY"],"bins":["vmware-policy","kubectl","helm"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
 compatibility: >
   vmware-policy auto-installed as Python dependency (provides @vmware_tool decorator and audit logging). All write operations audited to ~/.vmware/audit.db.
   AVI Controller operations require avisdk and a per-controller password env var in ~/.vmware-avi/.env following the pattern <CONTROLLER_NAME_UPPER>_PASSWORD (e.g., controller "prod-avi" → PROD_AVI_PASSWORD).

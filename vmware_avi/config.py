@@ -124,7 +124,9 @@ class ControllerConfig:
 
     name: str
     host: str
-    username: str = "admin"
+    config_username: str = "admin"
+    """Username as written in config.yaml. Read :attr:`username` instead — the
+    env var overrides this, and the override is what actually gets used."""
     api_version: str = "22.1.4"
     tenant: str = "admin"
     port: int = 443
@@ -138,6 +140,21 @@ class ControllerConfig:
     the next major release refuses it. Read-only operations are never affected.
     See :mod:`vmware_policy.environment`.
     """
+
+    @property
+    def username(self) -> str:
+        """Username for this controller, env var winning over config.yaml.
+
+        Resolved on every access, exactly like :attr:`password`. Reading it
+        once at load time would split the pair the override exists to keep
+        whole: a secret sidecar that rotates both halves mid-process would
+        move the password and leave the username behind, and the login would
+        use an account/password combination that was never issued together.
+        """
+        return os.environ.get(
+            f"{self.name.upper().replace('-', '_')}_USERNAME",
+            self.config_username,
+        )
 
     @property
     def password(self) -> str:
@@ -216,7 +233,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         ControllerConfig(
             name=c["name"],
             host=c["host"],
-            username=c.get("username", "admin"),
+            config_username=c.get("username", "admin"),
             api_version=c.get("api_version", "22.1.4"),
             tenant=c.get("tenant", "admin"),
             port=c.get("port", 443),
