@@ -48,4 +48,6 @@ testpaths = ["tests"]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests (require AVI Controller)",
+    "capability: Capability evals — scored trends, not pass/fail gates. Excluded from the default run (they measure quality, so <100% is expected and must not read as a broken build). Run them with: pytest -m capability",
 ]
+addopts = "-m 'not capability'"
