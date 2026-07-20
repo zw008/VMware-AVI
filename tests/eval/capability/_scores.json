@@ -3,16 +3,7 @@
   "scores": {
     "entity_reachability_full": {
       "detail": {
-        "broken_chains": [
-          {
-            "companion_skill_named": [],
-            "entity": "namespace",
-            "param": "namespace",
-            "producer_on_surface": [],
-            "routed_in_description": [],
-            "tool": "ako_ingress_check"
-          }
-        ],
+        "broken_chains": [],
         "entry_points": [
           "vs_list",
           "pool_list",
@@ -34,29 +25,20 @@
           "ako_clusters",
           "ako_amko_status"
         ],
-        "reachable_on_surface": 9,
+        "reachable_on_surface": 10,
         "reachable_only_via_description": 1,
         "required_entity_params": 11,
         "required_params_classified": "11/12",
         "tool_count": 28
       },
       "maximum": 11,
-      "pct": 90.9,
+      "pct": 100.0,
       "unit": "required entity params",
-      "value": 10
+      "value": 11
     },
     "entity_reachability_read_only": {
       "detail": {
-        "broken_chains": [
-          {
-            "companion_skill_named": [],
-            "entity": "namespace",
-            "param": "namespace",
-            "producer_on_surface": [],
-            "routed_in_description": [],
-            "tool": "ako_ingress_check"
-          }
-        ],
+        "broken_chains": [],
         "entry_points": [
           "vs_list",
           "pool_list",
@@ -75,16 +57,16 @@
           "ako_clusters",
           "ako_amko_status"
         ],
-        "reachable_on_surface": 4,
+        "reachable_on_surface": 5,
         "reachable_only_via_description": 1,
         "required_entity_params": 6,
         "required_params_classified": "6/6",
         "tool_count": 22
       },
       "maximum": 6,
-      "pct": 83.3,
+      "pct": 100.0,
       "unit": "required entity params",
-      "value": 5
+      "value": 6
     },
     "entry_point_availability": {
       "detail": {
@@ -118,21 +100,21 @@
     "manifest_context_headroom": {
       "detail": {
         "heaviest_tools": {
-          "ako_config_upgrade": 230,
-          "ako_ingress_diagnose": 212,
-          "ako_logs": 164,
-          "vs_analytics": 148,
-          "vs_toggle": 165
+          "ako_config_upgrade": 158,
+          "ako_ingress_check": 140,
+          "ako_ingress_diagnose": 174,
+          "ako_logs": 176,
+          "pool_member_disable": 136
         },
-        "manifest_tokens": 3041,
-        "mean_tokens_per_tool": 108.6,
+        "manifest_tokens": 3039,
+        "mean_tokens_per_tool": 108.5,
         "reference_context": 16384,
         "tool_count": 28
       },
       "maximum": 16384,
-      "pct": 81.4,
+      "pct": 81.5,
       "unit": "tokens",
-      "value": 13343
+      "value": 13345
     },
     "parameter_documentation_coverage": {
       "detail": {
@@ -155,9 +137,9 @@
     },
     "read_only_manifest_saving": {
       "detail": {
-        "full_manifest_tokens": 3041,
+        "full_manifest_tokens": 3039,
         "full_tool_count": 28,
-        "gated_manifest_tokens": 2153,
+        "gated_manifest_tokens": 2252,
         "gated_tool_count": 22,
         "withheld_tools": [
           "ako_config_upgrade",
@@ -168,10 +150,10 @@
           "vs_toggle"
         ]
       },
-      "maximum": 3041,
-      "pct": 29.2,
+      "maximum": 3039,
+      "pct": 25.9,
       "unit": "tokens",
-      "value": 888
+      "value": 787
     },
     "read_write_marker_coverage": {
       "detail": {
@@ -204,68 +186,28 @@
       "detail": {
         "per_dimension_pct": {
           "args": 100.0,
-          "gotcha": 32.1,
+          "gotcha": 100.0,
           "marker": 100.0,
-          "next_hop": 46.4,
-          "what": 42.9,
-          "when": 57.1
+          "next_hop": 100.0,
+          "what": 100.0,
+          "when": 100.0
         },
         "tools_graded": 28,
         "weakest_tools": {
-          "ako_amko_status": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_config_show": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_ingress_check": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_ingress_map": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_logs": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_sync_diff": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_sync_status": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ],
-          "ako_version": [
-            "gotcha",
-            "next_hop",
-            "what",
-            "when"
-          ]
+          "ako_amko_status": [],
+          "ako_clusters": [],
+          "ako_config_diff": [],
+          "ako_config_show": [],
+          "ako_config_upgrade": [],
+          "ako_ingress_check": [],
+          "ako_ingress_diagnose": [],
+          "ako_ingress_map": []
         }
       },
       "maximum": 168,
-      "pct": 63.1,
+      "pct": 100.0,
       "unit": "points",
-      "value": 106
+      "value": 168
     },
     "tool_failure_payload_quality": {
       "detail": {
@@ -273,15 +215,15 @@
           123,
           125
         ],
-        "carries_hint": 2,
+        "carries_hint": 0,
         "dict_shaped": 0,
         "error_return_sites": 2,
         "hint_names_artifact": 2
       },
       "maximum": 6,
-      "pct": 66.7,
+      "pct": 33.3,
       "unit": "checks",
-      "value": 4
+      "value": 2
     }
   }
 }

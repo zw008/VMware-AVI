@@ -145,12 +145,14 @@ def _capture_output(func, *args, **kwargs) -> str:
 )
 @vmware_tool(risk_level="low")
 def vs_list(controller: Optional[str] = None) -> str:
-    """[READ] List all Virtual Services with name, VIP, enabled state, and health score.
+    """[READ] List Virtual Services on the AVI Controller.
 
-    Use this for an overview before drilling into a specific VS with vs_status.
+    Returns Name, Enabled, VIP and short UUID for every VS in one call; it
+    cannot be paged or filtered, and carries no health score.
+    Use this before drilling into one VS with vs_status.
 
     Args:
-        controller: AVI controller name from config (optional, uses default).
+        controller: Controller name from config (optional, uses default).
     """
     from vmware_avi.ops.vs_mgmt import list_virtual_services
 
@@ -167,10 +169,12 @@ def vs_list(controller: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def vs_status(name: str) -> str:
-    """[READ] Show detailed status for a specific Virtual Service — VIP, pool,
-    health, connections, and throughput.
+    """[READ] Detailed status for one Virtual Service: VIP, pool, health,
+    connections, throughput.
 
-    Use vs_list first to find the exact VS name.
+    Returns one detail block, not a list. Use vs_list first for the exact name —
+    a name that does not match exactly fails. Then vs_analytics for metrics,
+    vs_error_logs for 5xx.
 
     Args:
         name: Exact Virtual Service name.
@@ -206,19 +210,16 @@ def vs_status(name: str) -> str:
     ),
 )
 def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
-    """[WRITE] Enable or disable a Virtual Service. Disabling stops all traffic to this VS.
+    """[WRITE] Enable or disable a Virtual Service. Disabling stops all traffic to it.
 
-    Use vs_status first to check current state.
+    Returns a one-line result. Use vs_status first to check current state.
 
-    SAFETY: When enable=False, requires confirmed=True to execute. Default False returns
-    a preview message describing the intended action. Enabling a VS is always safe and
-    does not require confirmation.
+    SAFETY: disabling requires confirmed=True; without it you get a preview
+    only. Enabling is always safe.
 
     Args:
         name: Exact Virtual Service name.
         enable: true to enable, false to disable.
-        confirmed: Must be True when enable=False to actually disable the VS.
-            Default False returns a preview-only message. Ignored when enable=True.
     """
     from vmware_avi.ops.vs_mgmt import toggle_vs
 
@@ -242,13 +243,12 @@ def vs_toggle(name: str, enable: bool, confirmed: bool = False) -> str:
 def pool_list(vs_filter: Optional[str] = None) -> str:
     """[READ] Discover pools on the Controller.
 
-    Use this BEFORE pool_members when you don't know exact pool names — pools often have
-    different names from VS. Pass vs_filter to narrow to pools referenced by matching
-    Virtual Services.
+    Returns Name, member count, Enabled and short UUID per pool. Use this before
+    pool_members: pools are often named differently from the VS that use them.
 
     Args:
-        vs_filter: Optional substring to match VS names (e.g. 'web') — returns pools
-            referenced by those VS only.
+        vs_filter: Substring matching VS names (e.g. 'web') — returns only the
+            pools those VS reference. Omit for all pools.
     """
     from vmware_avi.ops.pool_mgmt import list_pools
 
@@ -265,10 +265,11 @@ def pool_list(vs_filter: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def pool_members(pool: str) -> str:
-    """[READ] List all members of a pool with server IP, port, enabled state, and health status.
+    """[READ] List the members of a pool.
 
-    Use this before enabling/disabling individual members during maintenance windows.
-    Run pool_list first if you don't know the exact pool name.
+    Returns Server IP, Port, Enabled and Ratio per member. Use before
+    pool_member_enable or pool_member_disable; run pool_list first for the pool
+    name. Reports configured state only, not live health-monitor results.
 
     Args:
         pool: Pool name.
@@ -288,9 +289,10 @@ def pool_members(pool: str) -> str:
 )
 @vmware_tool(risk_level="medium")
 def pool_member_enable(pool: str, server: str) -> str:
-    """[WRITE] Enable a pool member to start receiving traffic.
+    """[WRITE] Enable a pool member so it receives traffic again.
 
-    Use pool_members first to verify server IP and current state.
+    Returns a one-line confirmation. Use pool_members first to verify the server
+    IP. The server must already belong to the pool — this adds nothing.
 
     Args:
         pool: Pool name.
@@ -314,16 +316,14 @@ def pool_member_disable(pool: str, server: str, confirmed: bool = False) -> str:
     """[WRITE] Disable a pool member with graceful drain — existing connections
     complete, no new traffic.
 
-    Use during maintenance windows or rolling deployments.
+    Returns a one-line result. Use for maintenance or rolling deployments; run
+    pool_members first for the server IP, pool_member_enable to reverse it.
 
-    SAFETY: Requires confirmed=True to execute. Default False returns a preview message
-    describing the intended action.
+    SAFETY: requires confirmed=True; without it you get a preview only.
 
     Args:
         pool: Pool name.
         server: Server IP address.
-        confirmed: Must be True to actually disable the pool member.
-            Default False returns a preview-only message.
     """
     if not confirmed:
         return (
@@ -346,14 +346,11 @@ def pool_member_disable(pool: str, server: str, confirmed: bool = False) -> str:
 )
 @vmware_tool(risk_level="low")
 def ssl_list() -> str:
-    """[READ] List all SSL/TLS certificates stored on the AVI Controller.
+    """[READ] List SSL/TLS certificates stored on the AVI Controller.
 
-    Returns a table of certificate Name, Subject common name, Expiry date, and Type
-    (e.g. CA vs virtual-service certificate), plus a total count. The full set is
-    returned in one call — no pagination or filtering. No parameters required;
-    connects to the default controller from config. Use for certificate inventory
-    or to find a certificate's exact name; use ssl_expiry_check instead when you
-    only need certificates expiring within the next N days.
+    Returns Name, Subject, Expiry and Type per certificate, in one call that
+    cannot be paged or filtered. Use for inventory or a certificate's exact name
+    — use ssl_expiry_check instead for only the ones expiring soon.
     """
     from vmware_avi.ops.ssl_mgmt import list_certificates
 
@@ -372,10 +369,12 @@ def ssl_list() -> str:
 def ssl_expiry_check(days: int = 30) -> str:
     """[READ] Check which SSL certificates expire within N days (default 30).
 
-    Returns certificate name, expiry date, and days remaining. Run regularly to prevent outages.
+    Returns name, expiry date and days remaining, soonest first. Use this
+    instead of ssl_list when you only want certificates near expiry. Expired
+    certs are included, with negative days remaining.
 
     Args:
-        days: Check certs expiring within this many days (default 30).
+        days: Report certs expiring within this many days (default 30).
     """
     from vmware_avi.ops.ssl_mgmt import check_expiry
 
@@ -392,19 +391,15 @@ def ssl_expiry_check(days: int = 30) -> str:
 )
 @vmware_tool(risk_level="low")
 def vs_analytics(vs_name: str) -> str:
-    """[READ] Show performance metrics for one Virtual Service over the last hour.
+    """[READ] Performance metrics for one Virtual Service over the last hour.
 
-    Queries the AVI analytics collection API with a fixed window: 12 samples at
-    5-minute granularity. Returns L4 metrics (avg bandwidth, completed and new
-    connections) and L7 metrics (avg client transaction latency, % response errors,
-    total responses). Empty output means the VS had no traffic in the window or analytics
-    collection is disabled — not an error. Use when investigating throughput or
-    latency issues after vs_status shows degraded health; use vs_error_logs for
-    per-request error detail with a configurable time window.
+    Returns L4 (bandwidth, connections) and L7 (latency, % errors, responses)
+    averages over a fixed window that cannot be changed (12 samples, 5 min
+    apart). Empty output means no traffic, not an error. Use when vs_status
+    shows degraded health; vs_error_logs gives per-request detail.
 
     Args:
-        vs_name: Exact Virtual Service name, case-sensitive, as shown by vs_list.
-            Fails with a 'not found' message if no VS matches.
+        vs_name: Exact Virtual Service name, case-sensitive, from vs_list.
     """
     from vmware_avi.ops.analytics import show_analytics
 
@@ -421,14 +416,15 @@ def vs_analytics(vs_name: str) -> str:
 )
 @vmware_tool(risk_level="low")
 def vs_error_logs(vs_name: str, since: str = "1h") -> str:
-    """[READ] Show recent request error logs for a Virtual Service — HTTP status
-    codes, client IPs, URIs, and response times.
+    """[READ] Recent request error logs for one Virtual Service.
 
-    Use to diagnose 5xx errors or latency spikes.
+    Returns up to 50 lines — timestamp, HTTP status, URI path, client IP — for
+    status 400 and above. Use this instead of vs_analytics for per-request
+    detail. An empty result may mean no errors, or capture disabled on the VS.
 
     Args:
-        vs_name: Virtual Service name.
-        since: Time window, e.g. '1h', '30m', '2d' (default '1h').
+        vs_name: Exact Virtual Service name, from vs_list.
+        since: Window — seconds or '30m', '1h', '2d' (default '1h').
     """
     from vmware_avi.ops.analytics import show_error_logs
 
@@ -445,15 +441,11 @@ def vs_error_logs(vs_name: str, since: str = "1h") -> str:
 )
 @vmware_tool(risk_level="low")
 def se_list() -> str:
-    """[READ] List all Service Engines (AVI data-plane VMs) on the Controller.
+    """[READ] List Service Engines (AVI data-plane VMs) on the Controller.
 
-    Returns one row per SE: Name, management IP, operational status (e.g. OPER_UP),
-    and SE Group, sourced from the serviceengine-inventory endpoint (config +
-    runtime merged). The full list is returned in one call — no pagination or
-    filtering. No parameters required; connects to the default controller from
-    config. Use to inventory data-plane capacity or find an SE's name and IP; use
-    se_health instead for per-SE operational status and connected-VS counts when
-    investigating degraded Virtual Service health.
+    Returns Name, management IP, status (e.g. OPER_UP) and SE Group per SE, in
+    one call that cannot be paged or filtered. Use to inventory capacity or find
+    an SE's name and IP — use se_health instead for degraded VS health.
     """
     from vmware_avi.ops.se_mgmt import list_service_engines
 
@@ -470,11 +462,12 @@ def se_list() -> str:
 )
 @vmware_tool(risk_level="low")
 def se_health() -> str:
-    """[READ] Check health of all Service Engines — operational status and connected-VS counts.
+    """[READ] Health of every Service Engine — operational status and VS counts.
 
-    VS placement is reconstructed from the virtualservice-inventory placement map
-    (vip_summary[].service_engine[]). Use when VS health degrades to check if the
-    issue is at the SE level.
+    Returns name, operational state and the number of VSes placed on each SE.
+    Use when VS health degrades to check if the issue is at the SE level;
+    se_list gives the management IP and SE Group, vs_status the affected VS.
+    An SE hosting no VS reports 0, not an error.
     """
     from vmware_avi.ops.se_mgmt import check_se_health
 
@@ -496,10 +489,12 @@ def se_health() -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_status(context: Optional[str] = None) -> str:
-    """[READ] Check AKO (AVI Kubernetes Operator) pod status — running, restarts,
-    age, and ready state.
+    """[READ] Check AKO (AVI Kubernetes Operator) pod status in Kubernetes.
 
-    First step when troubleshooting Ingress or LoadBalancer issues in Tanzu/K8s.
+    Returns pod name, phase, ready flag, restart count and namespace. First step
+    for Ingress or LoadBalancer issues in Tanzu/K8s; follow with ako_logs when
+    it is not Running. Looks in one context's AKO namespace only — run
+    ako_clusters if not found.
 
     Args:
         context: K8s context name (optional, uses current context).
@@ -519,15 +514,17 @@ def ako_status(context: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_logs(tail: int = 100, since: Optional[str] = None, context: Optional[str] = None) -> str:
-    """[READ] View AKO pod logs to debug Ingress creation failures, sync errors,
-    or AVI Controller connectivity issues.
+    """[READ] AKO pod logs — Ingress creation failures, sync errors, Controller
+    connectivity.
 
-    Use 'since' to narrow the time window.
+    Returns raw log text, not a table. Use when ako_status shows the pod
+    unhealthy or ako_sync_diff reports a missing Ingress. Only the running
+    container's logs are returned.
 
     Args:
-        tail: Number of log lines to show (default 100).
-        since: Time filter, e.g. '30m', '1h'.
-        context: K8s context name (optional, uses current context).
+        tail: Number of log lines (default 100).
+        since: Narrows the window, e.g. '30m', '1h'.
+        context: K8s context (optional, uses current).
     """
     from vmware_avi.ops.ako_pod import view_ako_logs
 
@@ -544,17 +541,16 @@ def ako_logs(tail: int = 100, since: Optional[str] = None, context: Optional[str
 )
 @vmware_tool(risk_level="high")
 def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
-    """[WRITE] Restart AKO pod by deleting it (its StatefulSet recreates it automatically).
+    """[WRITE] Restart the AKO pod by deleting it — its StatefulSet recreates it.
 
-    Use when AKO is stuck or after config changes. Brief traffic disruption possible during restart.
+    Returns a one-line result. Use when AKO is stuck or after config changes;
+    brief traffic disruption is possible. Run ako_status afterwards, and
+    ako_logs if the pod is not Running.
 
-    SAFETY: Requires confirmed=True to execute. Default False returns a preview message
-    describing the intended action.
+    SAFETY: requires confirmed=True; without it you get a preview only.
 
     Args:
         context: K8s context name (optional).
-        confirmed: Must be True to actually restart the AKO pod.
-            Default False returns a preview-only message.
     """
     if not confirmed:
         ctx_hint = f" in context '{context}'" if context else ""
@@ -579,9 +575,12 @@ def ako_restart(context: Optional[str] = None, confirmed: bool = False) -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_version(context: Optional[str] = None) -> str:
-    """[READ] Show AKO version, Helm chart version, and container image tag.
+    """[READ] AKO version running in a cluster, read from the pod's image tag.
 
-    Use to verify AKO version compatibility with AVI Controller.
+    Returns the pod name and an Image/Version pair per container. Use it to
+    check compatibility with the Controller, and before ako_config_diff or
+    ako_config_upgrade so both target the installed chart. The tag is the only
+    source, so 'latest' reports 'latest', not a number.
 
     Args:
         context: K8s context name (optional).
@@ -601,8 +600,12 @@ def ako_version(context: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_config_show() -> str:
-    """[READ] Show current AKO Helm values.yaml configuration — controller IP,
-    cloud name, network settings, and feature flags."""
+    """[READ] The AKO Helm release's values — controller IP, cloud name, network
+    settings, feature flags.
+
+    Returns YAML as helm reports it. Use this first to read the live config; use
+    ako_config_diff instead to see what an upgrade would change. Only values
+    supplied at install time appear; chart defaults do not."""
     from vmware_avi.ops.ako_config import show_ako_config
 
     return _capture_output(show_ako_config)
@@ -618,20 +621,16 @@ def ako_config_show() -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_config_diff(chart_version: str = "") -> str:
-    """[READ] Show pending Helm value changes that haven't been applied yet.
+    """[READ] Pending Helm value changes that have not been applied yet.
 
-    Use before ako_config_upgrade to review what will change. Runs the same
-    helm command ako_config_upgrade does, --reuse-values included, so the
-    preview describes the actual upgrade rather than the chart's defaults.
-
-    Gotcha: with chart_version empty this resolves whatever the Broadcom
-    registry currently tags latest, so two runs can differ with no local
-    change. Read the installed version with ako_version and pass it to both
-    tools when you need the preview and the apply to target one chart.
+    Returns helm's diff output; empty means nothing would change.
+    Use this before ako_config_upgrade — it runs the same command, so the
+    preview is real. Note: with chart_version empty the registry's moving latest
+    is resolved, so two runs can differ with no local change; read ako_version
+    and pass it to both.
 
     Args:
-        chart_version: Pin the chart version to compare against, e.g. "1.11.1".
-            Empty (default) uses the registry's current latest.
+        chart_version: Pin the chart, e.g. "1.11.1". Empty = registry latest.
     """
     from vmware_avi.ops.ako_config import diff_ako_config
 
@@ -650,24 +649,17 @@ def ako_config_diff(chart_version: str = "") -> str:
 def ako_config_upgrade(
     dry_run: bool = True, confirmed: bool = False, chart_version: str = ""
 ) -> str:
-    """[WRITE] Apply AKO Helm upgrade with updated values. Defaults to dry_run=true for safety.
+    """[WRITE] Apply an AKO Helm upgrade (dry_run=true by default).
 
-    Discovers the AKO Helm release in avi-system automatically (official installs
-    use --generate-name) and upgrades from the official Broadcom OCI chart with
-    --reuse-values. Set dry_run=false to apply. Fails with a teaching error if no
-    AKO release is installed.
+    Returns helm's output. Run ako_config_diff first to review the change. Finds
+    the avi-system release automatically and upgrades the Broadcom OCI chart
+    with --reuse-values.
 
-    SAFETY: When dry_run=False, requires confirmed=True to execute. Default False
-    returns a preview message describing the intended action. Dry-run is always
-    safe and does not require confirmation.
+    SAFETY: applying (dry_run=False) requires confirmed=True, else preview only.
 
     Args:
-        dry_run: Preview changes without applying (default true).
-        confirmed: Must be True when dry_run=False to actually apply the upgrade.
-            Default False returns a preview-only message. Ignored when dry_run=True.
-        chart_version: Pin the chart version to upgrade to, e.g. "1.11.1". Empty
-            (default) takes the registry's current latest, which can move
-            between an ako_config_diff call and this one.
+        dry_run: Preview without applying (default true).
+        chart_version: Pin the chart, e.g. "1.11.1". Empty = registry latest.
     """
     from vmware_avi.ops.ako_config import upgrade_ako
 
@@ -693,8 +685,13 @@ def ako_config_upgrade(
 )
 @vmware_tool(risk_level="low")
 def ako_ingress_check(namespace: str, context: Optional[str] = None) -> str:
-    """[READ] Validate Ingress annotations in a namespace — checks for unsupported
-    or misspelled AKO annotations that prevent VS creation.
+    """[READ] Validate every Ingress in one namespace: IngressClass and TLS
+    secret references that would stop AKO creating a Virtual Service.
+
+    Returns name, IngressClass, issues and OK/ISSUES per Ingress. Run
+    ako_ingress_map first for namespace names; use ako_ingress_diagnose instead
+    for one named Ingress. Covers one namespace only, and TLS checks are skipped
+    when its secrets cannot be listed.
 
     Args:
         namespace: K8s namespace to check.
@@ -715,9 +712,12 @@ def ako_ingress_check(namespace: str, context: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_ingress_map(context: Optional[str] = None) -> str:
-    """[READ] Show mapping between K8s Ingress resources and AVI Virtual Services.
+    """[READ] Inventory Kubernetes Ingresses across all namespaces.
 
-    Use to verify which Ingresses have corresponding VS objects.
+    Returns Namespace, Ingress name, Host(s) and IngressClass per Ingress. Start
+    here for namespace and Ingress names, then pass them to ako_ingress_check or
+    ako_ingress_diagnose. Lists the K8s side only — use ako_sync_diff for
+    Ingresses with no Controller object.
 
     Args:
         context: K8s context name (optional).
@@ -739,20 +739,17 @@ def ako_ingress_map(context: Optional[str] = None) -> str:
 def ako_ingress_diagnose(
     name: str, namespace: str = "default", context: Optional[str] = None
 ) -> str:
-    """[READ] Diagnose why a specific Ingress has no corresponding AVI Virtual Service.
+    """[READ] Diagnose why one Ingress has no corresponding AVI Virtual Service.
 
-    Reads the Ingress and validates three things: IngressClass is 'avi' or 'avi-lb',
-    each referenced TLS secret exists, and every backend Service exists in the
-    namespace. Returns the Ingress annotations, a numbered issue list, and concrete
-    fix suggestions (kubectl commands). If configuration is clean, it points you to
-    ako_logs and ako_sync_status as next steps. Use ako_ingress_map first to find
-    which Ingresses are missing a VS, then diagnose one here.
+    Validates IngressClass ('avi'/'avi-lb'), TLS secrets and backend Services.
+    Returns annotations, a numbered issue list and kubectl fixes. Use
+    ako_ingress_map first to find Ingresses lacking a VS. Checks configuration
+    only; when it is clean, try ako_logs and ako_sync_status.
 
     Args:
-        name: Exact Ingress resource name. Fails with 'not found' if absent.
-        namespace: K8s namespace containing the Ingress (default 'default').
-        context: kubeconfig context name (optional; uses current context).
-            Discover context names with ako_clusters.
+        name: Exact Ingress resource name.
+        namespace: Namespace holding the Ingress (default 'default').
+        context: kubeconfig context (optional), from ako_clusters.
     """
     from vmware_avi.ops.ako_ingress import diagnose_ingress
 
@@ -769,9 +766,13 @@ def ako_ingress_diagnose(
 )
 @vmware_tool(risk_level="low")
 def ako_sync_status(context: Optional[str] = None) -> str:
-    """[READ] Check sync status between K8s resources and AVI Controller objects.
+    """[READ] Compare the number of K8s Ingresses with the number of AVI Virtual
+    Services.
 
-    Shows in-sync, pending, and error counts.
+    Returns both counts and a match/mismatch verdict. Use this first as a cheap
+    check, then ako_sync_diff for which objects differ. A count comparison only
+    — in AKO shard mode many Ingresses share one VS, so a mismatch does not by
+    itself mean trouble.
 
     Args:
         context: K8s context name (optional).
@@ -791,10 +792,13 @@ def ako_sync_status(context: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_sync_diff(context: Optional[str] = None) -> str:
-    """[READ] Show specific inconsistencies between K8s Ingress/Service definitions
-    and AVI Controller VS/Pool objects.
+    """[READ] List Ingresses with no matching Virtual Service or pool on the
+    Controller.
 
-    Use to identify drift.
+    Returns Type, namespace/name and Status per suspect Ingress. Use when
+    ako_sync_status reports a mismatch; ako_sync_force reconciles. Shard-mode
+    Ingresses are matched heuristically against AKO pool names, so confirm a
+    'Missing' result with pool_list before acting.
 
     Args:
         context: K8s context name (optional).
@@ -814,17 +818,16 @@ def ako_sync_diff(context: Optional[str] = None) -> str:
 )
 @vmware_tool(risk_level="high")
 def ako_sync_force(context: Optional[str] = None, confirmed: bool = False) -> str:
-    """[WRITE] Force AKO to resync all K8s resources with AVI Controller.
+    """[WRITE] Force AKO to resync all K8s resources with the AVI Controller.
 
-    Use when drift is detected. May cause brief traffic disruption.
+    Returns a one-line result. Use when drift is detected; may cause brief
+    traffic disruption. Run ako_sync_diff first to see what is out of sync,
+    then ako_sync_status.
 
-    SAFETY: Requires confirmed=True to execute. Default False returns a preview message
-    describing the intended action.
+    SAFETY: requires confirmed=True; without it you get a preview only.
 
     Args:
         context: K8s context name (optional).
-        confirmed: Must be True to actually force the resync.
-            Default False returns a preview-only message.
     """
     if not confirmed:
         ctx_hint = f" in context '{context}'" if context else ""
@@ -851,12 +854,10 @@ def ako_clusters() -> str:
     """[READ] List every Kubernetes context in the active kubeconfig and whether
     AKO is deployed there.
 
-    Iterates contexts from `kubectl config get-contexts` (KUBECONFIG env var or
-    ~/.kube/config) and probes the avi-system namespace in each. Returns a table of
-    Context, AKO Status (pod phase, or 'Not deployed'), and AKO Version (image tag).
-    No parameters or filtering — all contexts are checked, so unreachable clusters
-    add latency. Requires kubectl on PATH. Start here to discover context names,
-    then pass one as `context` to ako_status, ako_logs, or ako_ingress_diagnose.
+    Returns Context, AKO Status (pod phase or 'Not deployed') and Version per
+    context. Requires kubectl on PATH; every context is probed, so unreachable
+    clusters add latency. Start here for context names, then pass one to
+    ako_status, ako_logs or ako_ingress_diagnose.
     """
     from vmware_avi.ops.ako_multi_cluster import list_clusters
 
@@ -873,8 +874,12 @@ def ako_clusters() -> str:
 )
 @vmware_tool(risk_level="low")
 def ako_amko_status() -> str:
-    """[READ] Show AMKO (AVI Multi-Cluster Kubernetes Operator) GSLB status —
-    global services, member clusters, and federation health."""
+    """[READ] AMKO (AVI Multi-Cluster Kubernetes Operator) GSLB status.
+
+    Returns raw kubectl output: the AMKO pods in avi-system, then the GSLBConfig
+    YAML if one exists. Use this only for multi-cluster GSLB questions — for
+    single-cluster AKO health use ako_status instead. Always reads the current
+    kubectl context; see ako_clusters."""
     from vmware_avi.ops.ako_multi_cluster import show_amko_status
 
     return _capture_output(show_amko_status)
