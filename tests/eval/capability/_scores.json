@@ -98,36 +98,22 @@
     },
     "error_actionability": {
       "detail": {
-        "dead_end_count": 2,
-        "dead_end_errors": [
-          {
-            "message": "AVI API {} '{}' failed with HTTP {}: {}. {}",
-            "missing": [
-              "names_artifact",
-              "states_remedy"
-            ],
-            "where": "connection.py:92"
-          },
-          {
-            "message": "AKO pod not found in namespace '{}'",
-            "missing": [
-              "names_artifact",
-              "states_remedy"
-            ],
-            "where": "ako_pod.py:25"
-          }
+        "composed_hint_sites": [
+          "connection.py:99"
         ],
+        "dead_end_count": 0,
+        "dead_end_errors": [],
         "per_dimension_pct": {
-          "names_artifact": 40.0,
-          "names_input": 90.0,
-          "states_remedy": 80.0
+          "names_artifact": 100.0,
+          "names_input": 100.0,
+          "states_remedy": 100.0
         },
         "raise_sites": 10
       },
       "maximum": 30,
-      "pct": 70.0,
+      "pct": 100.0,
       "unit": "points",
-      "value": 21
+      "value": 30
     },
     "manifest_context_headroom": {
       "detail": {
@@ -196,12 +182,23 @@
       "unit": "points",
       "value": 28
     },
+    "remedy_survives_truncation": {
+      "detail": {
+        "budget_chars": 300,
+        "over_budget": [],
+        "remedy_after_interpolation": []
+      },
+      "maximum": 10,
+      "pct": 100.0,
+      "unit": "messages",
+      "value": 10
+    },
     "teaching_error_rate": {
       "detail": {},
       "maximum": 10,
-      "pct": 40.0,
+      "pct": 100.0,
       "unit": "messages",
-      "value": 4
+      "value": 10
     },
     "tool_description_quality": {
       "detail": {
@@ -269,6 +266,22 @@
       "pct": 63.1,
       "unit": "points",
       "value": 106
+    },
+    "tool_failure_payload_quality": {
+      "detail": {
+        "bare_string_error_lines": [
+          123,
+          125
+        ],
+        "carries_hint": 2,
+        "dict_shaped": 0,
+        "error_return_sites": 2,
+        "hint_names_artifact": 2
+      },
+      "maximum": 6,
+      "pct": 66.7,
+      "unit": "checks",
+      "value": 4
     }
   }
 }

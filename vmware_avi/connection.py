@@ -44,8 +44,8 @@ def _hint_for_status(status_code: int, path: str) -> str:
     """Return a correction hint for a failed API call."""
     if status_code == 404:
         return (
-            f"Resource at '{path}' not found — run the corresponding list "
-            "command to get the exact name/uuid."
+            "Resource not found — run the matching list tool (vs_list, pool_list, "
+            "ssl_list, se_list) to get the exact name/uuid, then retry."
         )
     if status_code in (401, 403):
         return (
@@ -57,7 +57,10 @@ def _hint_for_status(status_code: int, path: str) -> str:
             "Controller temporarily unavailable (gateway error) — retry "
             "shortly or check Controller health with: vmware-avi doctor"
         )
-    return "Check request parameters and Controller state."
+    return (
+        "Check the request parameters, then run 'vmware-avi doctor' to confirm the "
+        "Controller is reachable and healthy."
+    )
 
 
 def _api_request(session: ApiSession, method: str, path: str, **kwargs):
@@ -89,9 +92,13 @@ def _api_request(session: ApiSession, method: str, path: str, **kwargs):
             continue
 
         body = (getattr(resp, "text", "") or "")[:200]
+        # Hint before body: the agent-facing wrapper truncates at 300 characters
+        # with no ellipsis, and a 200-character response body is enough to push a
+        # trailing remedy past the cut. Losing Controller prose costs nothing;
+        # losing the correction costs the retry.
         raise AviApiError(
-            f"AVI API {method.upper()} '{path}' failed with HTTP {status}: "
-            f"{body or '(empty body)'}. {_hint_for_status(status, path)}",
+            f"AVI API {method.upper()} '{path}' failed with HTTP {status}. "
+            f"{_hint_for_status(status, path)} Response: {body or '(empty body)'}",
             status_code=status,
             path=path,
         )
@@ -171,9 +178,9 @@ class AviConnectionManager:
             session = self._create_session(ctrl)
         except ConnectionError as exc:
             raise AviApiError(
-                f"AVI Controller '{ctrl.name}' ({ctrl.host}) unreachable: {exc}. "
+                f"AVI Controller '{ctrl.name}' ({ctrl.host}) unreachable. "
                 "Check the controller address and credentials in "
-                "~/.vmware-avi/config.yaml, then run: vmware-avi doctor",
+                f"~/.vmware-avi/config.yaml, then run: vmware-avi doctor. Cause: {exc}",
                 path="login",
             ) from exc
         self._sessions[ctrl.name] = session

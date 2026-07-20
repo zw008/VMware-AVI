@@ -14,9 +14,12 @@ from mcp.server.fastmcp import FastMCP
 from vmware_policy import (
     apply_read_only_gate,
     mtime_cached_loader,
+    sanitize,
     set_environment_resolver,
     vmware_tool,
 )
+
+from vmware_avi.connection import AviApiError
 
 _log = logging.getLogger("vmware-avi-mcp")
 
@@ -28,9 +31,75 @@ mcp = FastMCP("vmware-avi")
 # ---------------------------------------------------------------------------
 
 
+_DOCTOR_HINT = "Run 'vmware-avi doctor' to verify Controller connectivity and credentials."
+
+
+def _safe_error(exc: Exception, tool: str) -> str:
+    """Return an agent-safe error string; log full detail server-side only.
+
+    Raw exception text can carry Controller response bodies, credentials in
+    URLs, or internal paths.
+
+    The rule is a property, not a list: every exception this skill raises on
+    purpose passes through — the builtin validation errors and this skill's own
+    ``AviApiError``, which already carries a teaching message — and only
+    genuinely unplanned ones are reduced. The enumeration below is the
+    mechanical expression of that rule, and it drifts.
+
+    ``OSError`` is allowed because ``config.py`` raises exactly one — the
+    missing-password error, this family's most common first-run failure, whose
+    entire remedy is the env var name it carries. Its subclasses
+    ``FileNotFoundError``, ``PermissionError``, ``TimeoutError`` and
+    ``ConnectionError`` were already allowed, so admitting the base class
+    widens exposure only to the remaining OS-level subtypes.
+
+    Anything else is reduced to its type, because an unplanned exception's text
+    was written for a developer reading a traceback, not for an agent deciding
+    what to do next, and it is the one that can carry credentials.
+    """
+    _log.error("Tool %s failed", tool, exc_info=True)
+    _passthrough = (
+        ValueError,
+        FileNotFoundError,
+        KeyError,
+        PermissionError,
+        TimeoutError,
+        ConnectionError,
+        OSError,
+        AviApiError,
+    )
+    if isinstance(exc, _passthrough):
+        return sanitize(str(exc), 300)
+    return f"{type(exc).__name__}: operation failed."
+
+
+def _as_error(captured: str, detail: str = "") -> str:
+    """Render a failed run as a payload no reader can mistake for output.
+
+    The ops layer reports failure the way a CLI does — print, then exit — so the
+    useful teaching text is already in ``captured`` and is kept verbatim. What
+    was missing is any marker that the run failed at all: without the prefix the
+    model receives a red "not found" message as an ordinary successful result
+    and reports it to the user as a finding (issue #31's failure mode).
+
+    ``_DOCTOR_HINT`` is appended only when the captured text names nothing to
+    act on. When the ops message already says which tool to run, repeating a
+    generic "run doctor" would bury the specific advice under worse advice.
+    """
+    body = " ".join((captured or "").split()) or detail
+    if detail and detail not in body:
+        body = f"{body} {detail}".strip()
+    if "vmware-avi" not in body:
+        body = f"{body} {_DOCTOR_HINT}".strip()
+    return f"Error: {body}"
+
+
 def _capture_output(func, *args, **kwargs) -> str:
-    """Run a function and capture its Rich console output as plain text."""
-    import importlib  # noqa: F401 — used via sys.modules lookup
+    """Run a function and capture its Rich console output as plain text.
+
+    Failures come back as an ``Error: ...`` payload rather than as the text the
+    function happened to print before dying.
+    """
     import sys
 
     buf = StringIO()
@@ -47,8 +116,13 @@ def _capture_output(func, *args, **kwargs) -> str:
 
     try:
         func(*args, **kwargs)
-    except SystemExit:
-        pass
+    except SystemExit as exc:
+        # A CLI ops function signals failure by exiting non-zero. `SystemExit(0)`
+        # is an early return — "nothing to do" — and is not a failure.
+        if exc.code:
+            return _as_error(buf.getvalue())
+    except Exception as exc:  # noqa: BLE001 — reduced to a safe string below
+        return _as_error(buf.getvalue(), _safe_error(exc, getattr(func, "__name__", "?")))
     finally:
         if mod and original_console is not None:
             mod.console = original_console

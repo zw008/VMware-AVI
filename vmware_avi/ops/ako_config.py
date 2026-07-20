@@ -29,7 +29,11 @@ def _find_ako_release(namespace: str) -> str:
         timeout=60,
     )
     if result.returncode != 0:
-        console.print(f"[red]helm list failed: {result.stderr.strip()}[/red]")
+        console.print(
+            "[red]helm list failed. Check that helm is installed and the current "
+            f"kube-context can reach the cluster: helm list -n {namespace}. "
+            f"Cause: {result.stderr.strip()}[/red]"
+        )
         raise SystemExit(1)
 
     try:
@@ -60,7 +64,11 @@ def show_ako_config(namespace: str = "avi-system") -> None:
         timeout=120,
     )
     if result.returncode != 0:
-        console.print(f"[red]Failed to get AKO values: {result.stderr.strip()}[/red]")
+        console.print(
+            f"[red]Failed to get Helm values for AKO release '{release}'. Verify the "
+            f"release still exists: helm list -n {namespace}. "
+            f"Cause: {result.stderr.strip()}[/red]"
+        )
         raise SystemExit(1)
 
     console.print(f"\n[bold]AKO Helm Values (release: {release})[/bold]\n")
@@ -145,7 +153,12 @@ def upgrade_ako(
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
-        console.print(f"[red]Helm upgrade failed: {result.stderr.strip()}[/red]")
+        console.print(
+            f"[red]Helm upgrade failed for AKO release '{release}'. The release was not "
+            "changed. Preview the change first with ako_config_diff, and pin "
+            "chart_version so preview and apply target one chart. "
+            f"Cause: {result.stderr.strip()}[/red]"
+        )
         raise SystemExit(1)
 
     console.print(result.stdout)

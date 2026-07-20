@@ -108,7 +108,10 @@ def list_pool_members(pool_name: str) -> None:
 
     pool = session.get_object_by_name("pool", pool_name)
     if not pool:
-        console.print(f"[red]Pool '{pool_name}' not found.[/red]")
+        console.print(
+            f"[red]Pool '{pool_name}' not found on this Controller. Run pool_list to "
+            "see available pools and copy an exact name.[/red]"
+        )
         raise SystemExit(1)
 
     servers = pool.get("servers", [])
@@ -158,7 +161,10 @@ def toggle_pool_member(
 
     pool = session.get_object_by_name("pool", pool_name)
     if not pool:
-        console.print(f"[red]Pool '{pool_name}' not found.[/red]")
+        console.print(
+            f"[red]Pool '{pool_name}' not found on this Controller. Run pool_list to "
+            "see available pools and copy an exact name.[/red]"
+        )
         raise SystemExit(1)
 
     found = False
@@ -169,7 +175,11 @@ def toggle_pool_member(
             break
 
     if not found:
-        console.print(f"[red]Server '{server_ip}' not found in pool '{pool_name}'.[/red]")
+        console.print(
+            f"[red]Server '{server_ip}' is not a member of pool '{pool_name}'. Run "
+            f"pool_members (CLI: vmware-avi pool members '{pool_name}') to list the "
+            "member IPs and copy an exact one.[/red]"
+        )
         raise SystemExit(1)
 
     # avisdk does NOT raise on 4xx/5xx — route through api_put so a failed
@@ -178,7 +188,9 @@ def toggle_pool_member(
         api_put(session, f"pool/{pool['uuid']}", data=pool)
     except AviApiError as exc:
         console.print(
-            f"[red]Failed to {action} pool member '{server_ip}' in '{pool_name}': {exc}[/red]"
+            f"[red]Failed to {action} pool member '{server_ip}' in '{pool_name}'. The "
+            "member was not changed — run pool_members to confirm its current state "
+            f"before retrying. Cause: {exc}[/red]"
         )
         raise SystemExit(1) from None
     console.print(f"[green]Pool member '{server_ip}' {action}d in '{pool_name}'.[/green]")

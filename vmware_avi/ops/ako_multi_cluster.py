@@ -19,7 +19,11 @@ def list_clusters() -> None:
         timeout=30,
     )
     if result.returncode != 0:
-        console.print(f"[red]Failed to list contexts: {result.stderr.strip()}[/red]")
+        console.print(
+            "[red]Failed to list kube-contexts. Check that kubectl is on PATH and that "
+            "KUBECONFIG (or ~/.kube/config) points at a readable file: kubectl config "
+            f"get-contexts. Cause: {result.stderr.strip()}[/red]"
+        )
         raise SystemExit(1)
 
     contexts = [c.strip() for c in result.stdout.strip().split("\n") if c.strip()]

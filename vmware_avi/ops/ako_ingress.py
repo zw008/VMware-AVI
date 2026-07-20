@@ -113,7 +113,11 @@ def diagnose_ingress(name: str, namespace: str = "default", context: str | None 
     try:
         ing = net_v1.read_namespaced_ingress(name, namespace)
     except Exception:
-        console.print(f"[red]Ingress '{name}' not found in namespace '{namespace}'.[/red]")
+        console.print(
+            f"[red]Ingress '{name}' not found in namespace '{namespace}'. Run "
+            "ako_ingress_map to list the Ingresses AKO manages, or check the namespace "
+            f"with: kubectl get ingress -n {namespace}[/red]"
+        )
         raise SystemExit(1)
 
     console.print(f"\n[bold]Diagnosing Ingress: {namespace}/{name}[/bold]\n")

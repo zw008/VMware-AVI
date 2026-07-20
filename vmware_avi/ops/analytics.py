@@ -22,18 +22,27 @@ def _parse_duration_seconds(value: str | int) -> int:
     """
     if isinstance(value, int):
         if value < 0:
-            raise ValueError("duration must be non-negative")
+            raise ValueError(
+                "duration must be non-negative. Pass whole seconds (e.g. 3600) or a "
+                "suffix form (e.g. '1h'). Run 'vmware-avi analytics --help' for the "
+                "accepted values."
+            )
         return value
 
     s = str(value).strip().lower()
     if not s:
-        raise ValueError("duration must be non-empty")
+        raise ValueError(
+            "duration must be non-empty. Pass whole seconds (e.g. 3600) or a suffix "
+            "form (e.g. '1h', '30m'). Run 'vmware-avi analytics --help' for the "
+            "accepted values."
+        )
 
     m = re.fullmatch(r"(\d+)\s*([smhd]?)", s)
     if not m:
         raise ValueError(
-            f"invalid duration {value!r}: expected integer seconds or suffix "
-            "s/m/h/d (e.g. '1h', '30m', '3600')"
+            "invalid duration: expected whole seconds or a suffix form s/m/h/d "
+            "(e.g. '1h', '30m', '3600'). Run 'vmware-avi analytics --help' for the "
+            f"accepted values. Got: {value!r}"
         )
     n = int(m.group(1))
     unit = m.group(2) or "s"
@@ -48,7 +57,11 @@ def show_analytics(vs_name: str) -> None:
 
     vs = session.get_object_by_name("virtualservice", vs_name)
     if not vs:
-        console.print(f"[red]Virtual Service '{vs_name}' not found.[/red]")
+        console.print(
+            f"[red]Virtual Service '{vs_name}' not found on this Controller. Run vs_list "
+            "(CLI: vmware-avi vs list) to see available Virtual Services and copy an "
+            "exact name.[/red]"
+        )
         raise SystemExit(1)
 
     uuid = vs["uuid"]
@@ -149,7 +162,11 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
 
     vs = session.get_object_by_name("virtualservice", vs_name)
     if not vs:
-        console.print(f"[red]Virtual Service '{vs_name}' not found.[/red]")
+        console.print(
+            f"[red]Virtual Service '{vs_name}' not found on this Controller. Run vs_list "
+            "(CLI: vmware-avi vs list) to see available Virtual Services and copy an "
+            "exact name.[/red]"
+        )
         raise SystemExit(1)
 
     try:

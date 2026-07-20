@@ -161,7 +161,10 @@ class ControllerConfig:
         env_key = f"{self.name.upper().replace('-', '_')}_PASSWORD"
         pw = os.environ.get(env_key, "")
         if not pw:
-            raise OSError(f"Password not found. Set environment variable: {env_key}")
+            raise OSError(
+                "Password not found. Add it to ~/.vmware-avi/.env (chmod 600), or "
+                f"export the environment variable {env_key}"
+            )
         return _decode_secret(pw)
 
 
@@ -193,7 +196,11 @@ class AppConfig:
             if c.name == name:
                 return c
         available = ", ".join(c.name for c in self.controllers)
-        raise KeyError(f"Controller '{name}' not found. Available: {available}")
+        raise KeyError(
+            f"Controller '{name}' not found. Run 'vmware-avi config' to see the "
+            "configured controllers, or add this one under 'controllers:' in "
+            f"~/.vmware-avi/config.yaml. Available: {available}"
+        )
 
     def environment_for(self, name: str | None) -> str:
         """Return the environment declared by ``name``, or by the default controller.
@@ -214,7 +221,11 @@ class AppConfig:
         if self.default_controller:
             return self.get_controller(self.default_controller)
         if not self.controllers:
-            raise ValueError("No controllers configured. Check config.yaml")
+            raise ValueError(
+                "No controllers configured — at least one entry is expected under "
+                "'controllers:' in ~/.vmware-avi/config.yaml. Run 'vmware-avi init' "
+                "to create one interactively."
+            )
         return self.controllers[0]
 
 
@@ -223,7 +234,8 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     path = config_path or CONFIG_FILE
     if not path.exists():
         raise FileNotFoundError(
-            f"Config file not found: {path}\nCopy config.example.yaml to {CONFIG_FILE} and edit it."
+            "Config file not found. Run 'vmware-avi init' to create one, or copy "
+            f"config.example.yaml to {CONFIG_FILE} and edit it. Looked in: {path}"
         )
 
     with open(path) as f:

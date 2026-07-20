@@ -51,7 +51,11 @@ def show_vs_status(name: str) -> None:
 
     vs = session.get_object_by_name("virtualservice", name)
     if not vs:
-        console.print(f"[red]Virtual Service '{name}' not found.[/red]")
+        console.print(
+            f"[red]Virtual Service '{name}' not found on this Controller. Run vs_list "
+            "(CLI: vmware-avi vs list) to see available Virtual Services and copy an "
+            "exact name.[/red]"
+        )
         raise SystemExit(1)
 
     uuid = vs.get("uuid", "")
@@ -155,7 +159,11 @@ def toggle_vs(name: str, *, enable: bool, skip_prompt: bool = False) -> None:
 
     vs = session.get_object_by_name("virtualservice", name)
     if not vs:
-        console.print(f"[red]Virtual Service '{name}' not found.[/red]")
+        console.print(
+            f"[red]Virtual Service '{name}' not found on this Controller. Run vs_list "
+            "(CLI: vmware-avi vs list) to see available Virtual Services and copy an "
+            "exact name.[/red]"
+        )
         raise SystemExit(1)
 
     vs["enabled"] = enable
@@ -164,6 +172,10 @@ def toggle_vs(name: str, *, enable: bool, skip_prompt: bool = False) -> None:
     try:
         api_put(session, f"virtualservice/{vs['uuid']}", data=vs)
     except AviApiError as exc:
-        console.print(f"[red]Failed to {action} Virtual Service '{name}': {exc}[/red]")
+        console.print(
+            f"[red]Failed to {action} Virtual Service '{name}'. The Virtual Service was "
+            "not changed — run vs_status to confirm its current state before retrying. "
+            f"Cause: {exc}[/red]"
+        )
         raise SystemExit(1) from None
     console.print(f"[green]Virtual Service '{name}' {action}d.[/green]")
