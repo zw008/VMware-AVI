@@ -194,12 +194,6 @@ class AppConfig:
     controllers: tuple[ControllerConfig, ...] = ()
     default_controller: str = ""
     ako: AkoConfig = field(default_factory=AkoConfig)
-    read_only: bool = False
-    """Withhold every write tool from the MCP registry.
-
-    Env vars ``VMWARE_AVI_READ_ONLY`` / ``VMWARE_READ_ONLY`` override this.
-    See :mod:`vmware_policy.readonly`.
-    """
 
     def get_controller(self, name: str) -> ControllerConfig:
         for c in self.controllers:
@@ -251,6 +245,14 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     with open(path) as f:
         raw = yaml.safe_load(f) or {}
 
+    if isinstance(raw, dict) and "read_only" in raw:
+        _log.warning(
+            "'read_only' in config is no longer honored (the skill-level read-only "
+            "switch was removed in v1.8.7). To run this agent read-only, point it at "
+            "a read-only vCenter/NSX service account (RBAC) — enforced at the "
+            "platform. Remove the 'read_only' key to silence this warning."
+        )
+
     controllers = tuple(
         ControllerConfig(
             name=c["name"],
@@ -276,5 +278,4 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         controllers=controllers,
         default_controller=raw.get("default_controller", ""),
         ako=ako,
-        read_only=bool(raw.get("read_only", False)),
     )

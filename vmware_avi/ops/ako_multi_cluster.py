@@ -5,6 +5,8 @@ from __future__ import annotations
 import subprocess
 
 from rich.console import Console
+
+from vmware_avi._safety import print_external
 from rich.table import Table
 
 console = Console()
@@ -103,7 +105,7 @@ def show_amko_status() -> None:
     if result.returncode != 0 or not result.stdout.strip():
         console.print("  [dim]AMKO not deployed in avi-system namespace.[/dim]")
     else:
-        console.print(result.stdout)
+        print_external(console, result.stdout, max_len=4000)
 
     gslb_check = subprocess.run(
         ["kubectl", "get", "gslbconfig", "-n", "avi-system", "-o", "yaml"],

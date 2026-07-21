@@ -144,7 +144,7 @@ ako:
 | `controllers[].tenant` | No | `admin` | AVI tenant name |
 | `controllers[].port` | No | `443` | Controller HTTPS port |
 | `controllers[].verify_ssl` | No | `true` | TLS certificate verification |
-| `controllers[].environment` | Recommended | -- | Which environment this is (`production` / `staging` / `lab`). Policy rules scope by environment; a controller that declares none is treated as unknown. Today its writes run but log a warning — **the next major release will refuse them**. Read-only operations are never affected. |
+| `controllers[].environment` | Optional | -- | Free-form label (`production` / `staging` / `lab`). An environment-scoped `deny` rule in `~/.vmware/rules.yaml` can match on it to block writes (e.g. freeze `production`); a controller with no label is simply not matched by such a rule. Read-only operations are never affected. |
 | `default_controller` | No | first entry | Which controller to use by default |
 | `ako.kubeconfig` | No | `~/.kube/config` | Path to kubeconfig file |
 | `ako.default_context` | No | current-context | K8s context for AKO operations |
@@ -239,57 +239,9 @@ Optional deny rules and maintenance windows can be configured in `~/.vmware/rule
 | AKO config upgrade | Defaults to `--dry-run`; double confirmation for actual apply |
 | AKO sync force | Double confirmation prompt |
 
-### Read-Only Mode
+### Read-Only Operation
 
-Read-only mode removes all 6 write tools (`vs_toggle`, `pool_member_enable`,
-`pool_member_disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`)
-from the MCP registry at start-up, so `list_tools()` never offers them. This is
-a structural guarantee rather than a prompt instruction a model may ignore --
-useful for audits, PoCs, and untrusted or local models. It is **off by
-default**. Three ways to turn it on, highest precedence first:
-
-| Priority | Switch | Scope |
-|:-:|---|---|
-| 1 | `VMWARE_AVI_READ_ONLY=true` | this skill only |
-| 2 | `VMWARE_READ_ONLY=true` | every installed VMware skill |
-| 3 | `read_only: true` in `~/.vmware-avi/config.yaml` | this skill only |
-| 4 | *(nothing set)* | off |
-
-A per-skill variable beats the family-wide one, which beats config. Setting the
-family variable in one MCP client `env` block puts the whole estate into an
-audit posture at once -- no config file edits:
-
-```json
-{
-  "mcpServers": {
-    "vmware-avi": {
-      "command": "vmware-avi",
-      "args": ["mcp"],
-      "env": { "VMWARE_READ_ONLY": "true" }
-    }
-  }
-}
-```
-
-**Fail-closed.** If the mode is requested but cannot be *proven* -- the tool
-registry cannot be enumerated, or a removal does not take effect -- the server
-refuses to start rather than serving write tools it promised to withhold. One
-deliberate exception: an unrecognised value (`VMWARE_READ_ONLY=ture`) does not
-abort. It resolves to **on** with a warning, so a typo locks the deployment
-down instead of leaving it open.
-
-**Verifying it took effect:**
-
-- `vmware-avi doctor` reports the resolved state *and which switch it came
-  from* -- including a distinct warning when the value was a typo that fell
-  through to on.
-- The server logs `Read-only mode active for vmware-avi -- withheld 6 write
-  tool(s): ...` at start-up, naming each one.
-- A blank value (`"VMWARE_READ_ONLY": ""`) counts as *unset*, not as an
-  explicit off, so a leftover template placeholder cannot silently override
-  `read_only: true` in config.
-- The config file consulted is the one `VMWARE_AVI_CONFIG` points at, matching
-  the connection layer -- a custom config path is not silently ignored.
+To run the agent read-only, give it a read-only AVI service account (RBAC).
 
 ### Data Sanitization
 

@@ -197,11 +197,18 @@ def show_error_logs(vs_name: str, since: str = "1h") -> None:
         # Log-record fields can be present-but-null in L4/L7 records —
         # slicing None raises TypeError and printing None is noise, so
         # coalesce every field before formatting.
-        ts = log.get("report_timestamp") or ""
-        code = log.get("response_code") or ""
-        uri = (log.get("uri_path") or "")[:80]
-        client = log.get("client_ip") or ""
-        console.print(f"  [{ts}] {code} {uri} from {client}")
+        # Every field here is recorded by the Controller from the wire, and
+        # uri_path is chosen outright by whoever sent the request — no
+        # authentication needed, just a request that 4xx'd. Sanitize before
+        # formatting (it strips *then* truncates, so control-character padding
+        # cannot push a payload past the cap the way a bare [:80] slice let
+        # it), and print with markup off so a bracketed path is shown rather
+        # than parsed as Rich styling.
+        ts = sanitize(log.get("report_timestamp") or "")
+        code = sanitize(log.get("response_code") or "")
+        uri = sanitize(log.get("uri_path") or "", 80)
+        client = sanitize(log.get("client_ip") or "")
+        console.print(f"  [{ts}] {code} {uri} from {client}", markup=False)
 
     if not logs:
         console.print("  [green]No errors found.[/green]")

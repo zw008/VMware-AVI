@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from rich.console import Console
 
+from vmware_avi._safety import print_external
 from vmware_avi.config import load_config
 from vmware_avi.k8s_connection import K8sConnectionManager
 
@@ -89,7 +90,9 @@ def view_ako_logs(tail: int = 100, since: str = "", context: str | None = None) 
 
     logs = v1.read_namespaced_pod_log(**kwargs)
     console.print(f"\n[bold]AKO Logs ({pod_name})[/bold]\n")
-    console.print(logs)
+    # Pod logs are whatever a workload wrote to stdout, and this output is
+    # what an MCP agent reads back. Print them as inert literal text.
+    print_external(console, logs)
 
 
 def restart_ako(context: str | None = None, *, skip_prompt: bool = False) -> None:

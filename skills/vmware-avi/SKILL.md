@@ -16,7 +16,7 @@ installer:
 argument-hint: "[vs-name, ako command, or describe your task]"
 allowed-tools:
   - Bash
-metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["<CONTROLLER>_PASSWORD","<CONTROLLER>_USERNAME","KUBECONFIG","VMWARE_READ_ONLY","VMWARE_AVI_READ_ONLY","VMWARE_AUDIT_APPROVED_BY"],"bins":["vmware-policy","kubectl","helm"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
+metadata: {"openclaw":{"requires":{"env":["VMWARE_AVI_CONFIG"],"bins":["vmware-avi"],"config":["~/.vmware-avi/config.yaml","~/.vmware-avi/.env"]},"optional":{"env":["<CONTROLLER>_PASSWORD","<CONTROLLER>_USERNAME","KUBECONFIG","VMWARE_AUDIT_APPROVED_BY"],"bins":["vmware-policy","kubectl","helm"]},"primaryEnv":"VMWARE_AVI_CONFIG","homepage":"https://github.com/zw008/VMware-AVI","emoji":"🔀","os":["macos","linux"]}}
 compatibility: >
   vmware-policy auto-installed as Python dependency (provides @vmware_tool decorator and audit logging). All write operations audited to ~/.vmware/audit.db.
   AVI Controller operations require avisdk and a per-controller password env var in ~/.vmware-avi/.env following the pattern <CONTROLLER_NAME_UPPER>_PASSWORD (e.g., controller "prod-avi" → PROD_AVI_PASSWORD).
@@ -161,10 +161,6 @@ vmware-avi doctor            # checks Controller connectivity + kubeconfig + avi
 
 **Read/write split**: 22 tools are read-only, 6 modify state. Write tools require double confirmation and are audit-logged.
 
-## Read-Only Mode
-
-If a write tool listed above (`vs_toggle`, `pool_member_enable`/`disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`) is absent from `list_tools()`, this deployment is in read-only mode: `VMWARE_READ_ONLY=true` (or `VMWARE_AVI_READ_ONLY`, or `read_only: true` in config.yaml) withholds all 6 write tools at start-up. That is a deliberate lockdown, not a fault — do not retry, and do not look for another tool that achieves the same change. Name the operation that is blocked and say an operator must clear the switch and restart the server. Read tools are unaffected; `vmware-avi doctor` reports the current state and its source. Running with local or small models? See [`references/agent-guardrails.md`](references/agent-guardrails.md).
-
 ## CLI Quick Reference
 
 ```bash
@@ -233,9 +229,6 @@ Health monitor may still be failing. Check the actual health status on the Contr
 ### SSL expiry check shows 0 certificates
 Verify the controller connection has tenant-level access. Certificates are tenant-scoped in AVI — the configured user may only see certs in their tenant.
 
-### Warning: "ran against a target that declares no environment"
-Policy rules scope by environment, and a controller that declares none is treated as unknown rather than safe. Today the write still runs and logs this warning; **the next major release will refuse it**. Add `environment: production` (or `staging` / `lab`) to that controller's entry in `~/.vmware-avi/config.yaml` now, and the enforcing release is a no-op for you. Read-only operations are never affected. Run `vmware-audit policy` to see the rules in force.
-
 ### AKO sync force has no effect
 Force resync triggers AKO to re-reconcile all K8s objects. If the drift persists, the issue is likely in the K8s resource definition itself (bad annotation, missing secret). Use `vmware-avi ako ingress diagnose` to pinpoint the root cause.
 
@@ -260,7 +253,7 @@ vmware-avi doctor            # verify Controller + K8s connectivity
 All operations are automatically audited via vmware-policy (`@vmware_tool` decorator):
 - Every tool call logged to `~/.vmware/audit.db` (SQLite, framework-agnostic)
 - Policy rules enforced via `~/.vmware/rules.yaml` (deny rules, maintenance windows, risk levels)
-- Each controller should declare `environment:` in `config.yaml` (`production` / `staging` / `lab`). Policy rules scope by environment, so a controller that declares none is treated as unknown: writes against it currently run but log a warning, and **the next major release will refuse them**. Reads are never affected
+- Each controller may declare `environment:` in `config.yaml` (`production` / `staging` / `lab`) as an optional label; an environment-scoped `deny` rule in `~/.vmware/rules.yaml` can match on it to block writes (e.g. freeze `production`). A controller with no label is simply not matched by such a rule. Reads are never affected
 - Destructive operations (`vs_toggle` disable, `pool_member_disable`, `ako_restart`, `ako_config_upgrade`, `ako_sync_force`) require double confirmation
 - `ako_config_upgrade` defaults to `--dry-run` mode — user must explicitly confirm to apply
 - View recent operations: `vmware-audit log --last 20`

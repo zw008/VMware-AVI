@@ -51,9 +51,8 @@ Each operation is classified by autonomy level per the Enterprise Harness Engine
 | **L4** | Multi-step plan / apply workflow | Plan generation auto; apply gated by user approval | *(roadmap — VS deployment plans, blue/green pool member rotations)* |
 | **L5** | Auto-remediation from learned pattern | Pattern library only; requires `risk:low` + `reversible:true` + `repeatable:true` | *(roadmap — candidates: stale pool member drain, AKO controller reconnect)* |
 
-> **Read-only mode**: with `VMWARE_READ_ONLY=true` the 6 L3 write tools above do
-> not appear in `list_tools()` at all. Classification comes from each tool's
-> `[READ]`/`[WRITE]` docstring marker, not from this table — see the README.
+> Classification comes from each tool's `[READ]`/`[WRITE]` docstring marker,
+> not from this table — see the README.
 
 **Notes**:
 - L1/L2 tools are always safe for agents to call without confirmation.

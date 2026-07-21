@@ -33,11 +33,7 @@ These are structural, so it cannot.
 
 | Guardrail you would otherwise prompt for | Now enforced by |
 |---|---|
-| "Work exclusively in read-only mode and never modify anything" | **Read-only mode.** Set `VMWARE_READ_ONLY=true` and all 6 write tools are removed from the registry at startup, leaving the 22 reads. `list_tools()` never offers them, so the model cannot call what it cannot see. |
-| "Never take a virtual service offline or disable a pool member" | Same gate. `vs_toggle`, `pool_member_enable` and `pool_member_disable` are simply absent. |
-| "Never restart or upgrade AKO" | Same gate covers `ako_restart`, `ako_config_upgrade` and `ako_sync_force`. An AKO upgrade is a Helm release change against a live cluster, not a local action. |
 | "Log every state change you make" | **The `@vmware_tool` decorator.** Every write is recorded to `~/.vmware/audit.db` before the model sees the result, and policy rules are evaluated ahead of execution. |
-| "Ask a human before doing something irreversible in production" | **Policy.** A controller declared `environment: production` requires a named approver (`VMWARE_AUDIT_APPROVED_BY`) for irreversible work. |
 | "Convert time windows into the units the API expects" | **The ops layer does the conversion.** Analytics duration accepts either an integer of seconds or a shorthand suffix (`30m`, `24h`, `7d`); the model does not have to know the controller wants seconds. |
 | "Use the controller's IP, not its hostname" | **The connection layer resolves it.** Some analytics endpoints reject a hostname; the FQDN is resolved to an address before the SDK sees it. |
 
@@ -46,45 +42,6 @@ return bare collections, not the family `{items, returned, limit, total,
 truncated, hint}` envelope. Truncation is therefore not self-declaring here, so
 the "report every item" and "state the limit you used" rules below carry more
 weight than they do in the rest of the family.
-
-### Turning read-only mode on
-
-One variable covers every skill in the family:
-
-```json
-{
-  "mcpServers": {
-    "vmware-avi": {
-      "command": "vmware-avi",
-      "args": ["mcp"],
-      "env": { "VMWARE_READ_ONLY": "true" }
-    }
-  }
-}
-```
-
-Per-skill override — useful when this skill alone should stay writable:
-
-```bash
-VMWARE_READ_ONLY=true        # whole family read-only
-VMWARE_AVI_READ_ONLY=false   # …except load balancing
-```
-
-Or permanently, in `~/.vmware-avi/config.yaml`:
-
-```yaml
-read_only: true
-```
-
-Precedence is per-skill env → family env → config file → off. The startup log
-lists exactly which tools were withheld, and `vmware-avi doctor` reports the
-resolved state and its source. An unparseable value (`VMWARE_READ_ONLY=ture`)
-enables read-only mode rather than silently ignoring the typo.
-
-A blocked tool is a lockdown, not a fault. When a write tool is missing from
-`list_tools()`, the model should name the operation it cannot perform and say
-an operator must clear the switch — not retry, and not reach for `kubectl` or
-`helm` to achieve the same change by another route.
 
 ---
 
@@ -156,8 +113,6 @@ your agent's instruction block.
 
 ## Writes in vmware-avi
 
-- A write tool missing from the tool list means read-only mode is on. Name the
-  blocked operation and stop. Do not retry and do not substitute another tool.
 - vs_toggle takes a virtual service out of service. Name the VS and its current
   state, and wait for confirmation.
 - ako_config_upgrade is a Helm release upgrade against a live cluster. Show

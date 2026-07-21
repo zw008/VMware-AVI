@@ -7,6 +7,8 @@ import subprocess
 
 from rich.console import Console
 
+from vmware_avi._safety import print_external, redact_yaml
+
 console = Console()
 
 # Official AKO chart location (Broadcom OCI registry). The legacy repo-alias
@@ -72,7 +74,20 @@ def show_ako_config(namespace: str = "avi-system") -> None:
         raise SystemExit(1)
 
     console.print(f"\n[bold]AKO Helm Values (release: {release})[/bold]\n")
-    console.print(result.stdout)
+    # `helm get values` returns the release's *user-supplied* values, so an AKO
+    # installed with `--set avicredentials.password=...` carries that password
+    # here — and in MCP mode this print is the tool result an agent reads.
+    # Redact structurally first, then print inert.
+    redacted = redact_yaml(result.stdout)
+    if not redacted:
+        console.print(
+            "[yellow]Helm returned values this command could not parse as YAML, so "
+            "they are withheld rather than printed unredacted. Run "
+            f"'helm get values {release} -n {namespace} -o yaml' directly to inspect "
+            "them.[/yellow]"
+        )
+        return
+    print_external(console, redacted, max_len=4000)
 
 
 def diff_ako_config(namespace: str = "avi-system", chart_version: str = "") -> None:
@@ -112,7 +127,7 @@ def diff_ako_config(namespace: str = "avi-system", chart_version: str = "") -> N
         console.print("[green]No pending changes.[/green]")
     else:
         console.print("\n[bold]Pending Changes[/bold]\n")
-        console.print(result.stdout)
+        print_external(console, result.stdout, max_len=4000)
 
 
 def upgrade_ako(
@@ -161,6 +176,6 @@ def upgrade_ako(
         )
         raise SystemExit(1)
 
-    console.print(result.stdout)
+    print_external(console, result.stdout, max_len=4000)
     if dry_run:
         console.print("\n[yellow]This was a dry-run. Use --no-dry-run to apply.[/yellow]")
