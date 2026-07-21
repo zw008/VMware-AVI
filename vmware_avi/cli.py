@@ -9,6 +9,7 @@ import sys
 
 import typer
 from rich.console import Console
+from vmware_policy import guarded
 
 from vmware_avi._errors import cli_errors, teach_and_exit
 
@@ -167,6 +168,8 @@ def vs_status(name: str = typer.Argument(help="Virtual Service name")) -> None:
 
 
 @vs_app.command("enable")
+@cli_errors
+@guarded(risk_level='high')
 def vs_enable(name: str = typer.Argument(help="Virtual Service name")) -> None:
     """Enable a Virtual Service."""
     from vmware_avi.ops.vs_mgmt import toggle_vs
@@ -180,6 +183,8 @@ def vs_enable(name: str = typer.Argument(help="Virtual Service name")) -> None:
 
 
 @vs_app.command("disable")
+@cli_errors
+@guarded(risk_level='high')
 def vs_disable(name: str = typer.Argument(help="Virtual Service name")) -> None:
     """Disable a Virtual Service (requires confirmation)."""
     from vmware_avi.ops.vs_mgmt import toggle_vs
@@ -205,6 +210,8 @@ def pool_members(pool: str = typer.Argument(help="Pool name")) -> None:
 
 
 @pool_app.command("enable")
+@cli_errors
+@guarded(risk_level='high')
 def pool_enable(
     pool: str = typer.Argument(help="Pool name"),
     server: str = typer.Argument(help="Server IP"),
@@ -221,6 +228,8 @@ def pool_enable(
 
 
 @pool_app.command("disable")
+@cli_errors
+@guarded(risk_level='high')
 def pool_disable(
     pool: str = typer.Argument(help="Pool name"),
     server: str = typer.Argument(help="Server IP"),
@@ -326,6 +335,8 @@ def ako_logs(
 
 
 @ako_app.command("restart")
+@cli_errors
+@guarded(risk_level='high')
 def ako_restart(
     context: str | None = typer.Option(None, help="K8s context"),
 ) -> None:
@@ -374,6 +385,8 @@ def ako_config_diff_cmd(
 
 
 @ako_app.command("config-upgrade")
+@cli_errors
+@guarded(risk_level='medium')
 def ako_config_upgrade_cmd(
     dry_run: bool = typer.Option(True, help="Preview only (default: true)"),
     chart_version: str = typer.Option(
@@ -446,6 +459,8 @@ def ako_sync_diff_cmd() -> None:
 
 
 @ako_app.command("sync-force")
+@cli_errors
+@guarded(risk_level='high')
 def ako_sync_force_cmd() -> None:
     """Force AKO resync (requires confirmation)."""
     from vmware_avi.ops.ako_sync import force_resync

@@ -16,6 +16,7 @@ from typing import Any
 
 import typer
 from rich.console import Console
+from vmware_policy import PolicyDenied
 
 console = Console()
 
@@ -82,6 +83,15 @@ def cli_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             return func(*args, **kwargs)
         except (typer.Exit, typer.Abort):
             raise
+        except PolicyDenied as exc:
+            # @guarded ran guard() before the body, matched a deny / closed
+            # maintenance-window rule, and already wrote the status="denied" audit
+            # row before re-raising. Name the rule that fired instead of dumping a
+            # traceback. Must precede `except Exception`: PolicyDenied is one, and
+            # teach_and_exit would otherwise swallow it into a bare re-raise.
+            rule = f" [dim](rule: {exc.result.rule})[/]" if exc.result.rule else ""
+            console.print(f"[red]Denied by policy: {exc.result.reason}[/]{rule}")
+            raise typer.Exit(1) from exc
         except Exception as exc:  # noqa: BLE001 — translated by teach_and_exit
             teach_and_exit(exc)  # raises typer.Exit for auth/TLS failures
             raise
